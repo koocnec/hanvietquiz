@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google-signin-client_id" content="983152578861-ql8q4fc1vhqs617u7la0d68uc5a4irmh.apps.googleusercontent.com">
+  <title>HanVietQuiz</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
+  <script src="https://accounts.google.com/gsi/client?hl=vi" async defer onload="window.initGoogleAuth && window.initGoogleAuth()"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css?v=google-login-1">
+</head>
+<body>
+  <div id="toast" class="toast"><span id="toastIcon" class="iconify text-indigo-400" data-icon="lucide:check-circle"></span><span id="toastText"></span></div>
+
+  <div id="modal" class="modal-overlay" aria-hidden="true">
+    <div class="modal-card">
+      <div class="flex items-center justify-between gap-4">
+        <h2 id="modalTitle" class="text-lg font-bold"></h2>
+        <button data-close-modal class="icon-button"><span class="iconify" data-icon="lucide:x"></span></button>
+      </div>
+      <div id="modalBody" class="mt-5"></div>
+    </div>
+  </div>
+
+  <nav class="topbar">
+    <button class="brand" data-route="home">
+      <span class="brand-mark">漢</span>
+      <span>HanViet<span class="text-indigo-400">Quiz</span></span>
+    </button>
+    <div id="topNav" class="top-nav"></div>
+    <div class="top-actions">
+      <button id="searchButton" class="icon-button" title="Tìm kiếm"><span class="iconify" data-icon="lucide:search"></span></button>
+      <button id="notificationButton" class="icon-button relative" title="Thông báo">
+        <span class="iconify" data-icon="lucide:bell"></span><i class="notification-dot"></i>
+      </button>
+      <button id="profileButton" class="profile-button"><span class="avatar">HV</span><span class="hidden sm:inline">Khách</span></button>
+    </div>
+    <div id="notificationMenu" class="dropdown-panel"></div>
+    <div id="profileMenu" class="dropdown-panel profile-menu"></div>
+  </nav>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <p class="sidebar-label">Menu chính</p>
+      <div id="mainSidebar"></div>
+      <p class="sidebar-label mt-6">Công cụ</p>
+      <div id="toolSidebar"></div>
+      <button class="upgrade-card" data-action="upgrade">
+        <span class="iconify text-indigo-400 text-xl" data-icon="lucide:crown"></span>
+        <strong>Nâng cấp Pro</strong>
+        <small>Mở khóa toàn bộ bài học và phân tích nâng cao.</small>
+        <span class="upgrade-price">59k/tháng</span>
+      </button>
+    </aside>
+
+    <main id="app" class="content"></main>
+  </div>
+
+  <template id="pageHeader">
+    <header class="page-header">
+      <div><h1 data-title></h1><p data-subtitle></p></div>
+      <div data-actions class="flex flex-wrap gap-2"></div>
+    </header>
+  </template>
+
+  <script src="./app.js?v=google-login-1"></script>
+</body>
+</html>
