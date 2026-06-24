@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="google-signin-client_id" content="983152578861-ql8q4fc1vhqs617u7la0d68uc5a4irmh.apps.googleusercontent.com">
-  <title>HanVietQuiz</title>
+  <title>HQ</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
   <script src="https://accounts.google.com/gsi/client?hl=vi" async defer onload="window.initGoogleAuth && window.initGoogleAuth()"></script>
@@ -25,9 +25,10 @@
   </div>
 
   <nav class="topbar">
-    <button class="brand" data-route="home">
-      <span class="brand-mark">漢</span>
-      <span>HanViet<span class="text-indigo-400">Quiz</span></span>
+    <button class="brand" data-route="home" aria-label="Trang chủ">
+      <span class="brand-mark" aria-hidden="true">
+        <img src="./assets/logo.svg" alt="">
+      </span>
     </button>
     <div id="topNav" class="top-nav"></div>
     <div class="top-actions">

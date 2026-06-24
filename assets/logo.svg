@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="108 70 255 190" fill="none">
+  <defs>
+    <linearGradient id="hqLogoGradient" x1="116" y1="78" x2="329" y2="214" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A8FCF2"/>
+      <stop offset=".43" stop-color="#62D3FF"/>
+      <stop offset=".7" stop-color="#7A8BFF"/>
+      <stop offset="1" stop-color="#A247FF"/>
+    </linearGradient>
+  </defs>
+  <path d="M116 91c0-7.2 5.8-13 13-13h11v121h-24V91Z" fill="url(#hqLogoGradient)"/>
+  <path d="M116 139h58v27h-58v-27Z" fill="url(#hqLogoGradient)"/>
+  <path d="M166 139h31v27h-31v-27Z" fill="url(#hqLogoGradient)"/>
+  <path d="M188 166 226 84c2-4.3 6.3-7 11.1-7h19.5c4.7 0 7.6 5.1 5.1 9.1L204 199l-16-33Z" fill="url(#hqLogoGradient)"/>
+  <path d="M254 88c56.3 0 102 45.7 102 102 0 16.2-3.8 31.6-10.6 45.2l-27.8-27.8c3-5.4 4.8-11.6 4.8-18.2 0-35.8-29-64.8-64.8-64.8-14 0-27 4.5-37.6 12.1l-13.5-27.9C220.2 95.6 237.2 88 254 88Z" fill="url(#hqLogoGradient)"/>
+  <path d="M254 122c37.6 0 68 30.4 68 68s-30.4 68-68 68c-28.3 0-52.6-17.2-62.9-41.7l24.2-17.2c4.8 16.9 20.3 29.3 38.7 29.3 22.2 0 40.2-18 40.2-40.2S276.2 148 254 148c-11.7 0-22.2 5-29.6 13l-13.2-27.1c11.7-7.5 26.5-11.9 42.8-11.9Z" fill="url(#hqLogoGradient)"/>
+  <path d="M315 220 349 254h-39l-22-22 27-12Z" fill="url(#hqLogoGradient)"/>
+  <circle cx="221" cy="168" r="8.5" fill="#66DFFF"/>
+  <circle cx="248" cy="168" r="8.5" fill="#77B6FF"/>
+  <circle cx="276" cy="168" r="8.5" fill="#955EFF"/>
+</svg>
