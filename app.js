@@ -334,12 +334,15 @@ function parseDelimitedText(text){
   for(let i=0;i<raw.length;i++){const ch=raw[i],next=raw[i+1];if(ch==='"'&&quoted&&next==='"'){cell+='"';i++}else if(ch==='"'){quoted=!quoted}else if(ch===delimiter&&!quoted){row.push(cell.trim());cell=""}else if(ch==="\n"&&!quoted){row.push(cell.trim());if(row.some(Boolean))rows.push(row);row=[];cell=""}else cell+=ch}
   row.push(cell.trim());if(row.some(Boolean))rows.push(row);return rows;
 }
+function excelAnswerNumber(value){const text=String(value||"").trim(),circled="①②③④⑤";const circledIndex=circled.indexOf(text[0]);if(circledIndex>=0)return circledIndex;const numeric=text.match(/^[1-5]/);return numeric?Number(numeric[0])-1:-1}
+function splitMarkedOptions(text){const matches=[...String(text||"").matchAll(/[①②③④⑤]|(?:^|\s)([1-5])[\).．]/g)];if(matches.length<2)return[];return matches.map((match,i)=>{const start=match.index+match[0].length,end=i+1<matches.length?matches[i+1].index:text.length;return String(text).slice(start,end).replace(/^[\s:：\-–|]+/,"").trim()}).filter(Boolean)}
+function excelQuestionFromRow(row,index,qCol,aCol,wrongCols){const question=row[qCol]?.trim(),answerRaw=row[aCol]?.trim();if(!question||!answerRaw)return null;const otherCells=(wrongCols.length?wrongCols:row.map((_,i)=>i).filter(i=>i!==qCol&&i!==aCol)).map(i=>row[i]?.trim()).filter(Boolean),answerNumber=excelAnswerNumber(answerRaw),markedOptions=splitMarkedOptions(otherCells.join(" | "));if(answerNumber>=0&&markedOptions[answerNumber]){return {id:`excel-${index}-${question.slice(0,12)}`,question,answer:markedOptions[answerNumber],wrongs:markedOptions.filter((_,i)=>i!==answerNumber)}}return {id:`excel-${index}-${question.slice(0,12)}`,question,answer:answerRaw,wrongs:otherCells}}
 function buildExcelQuestions(rows){
   if(!rows.length)return[];const headers=rows[0].map(x=>normalizeLearnText(x));const headerLooksReal=headers.some(x=>["question","cau hoi","cauhoi","q","dap an","dapan","đap an","đapan","answer","a"].includes(x));
   const body=headerLooksReal?rows.slice(1):rows,findCol=names=>headers.findIndex(h=>names.includes(h));
   const qCol=headerLooksReal?Math.max(0,findCol(["question","cau hoi","cauhoi","q","prompt"])):0,aCol=headerLooksReal?Math.max(1,findCol(["answer","dap an","dapan","đap an","đapan","a","correct"])):1;
   const wrongCols=headerLooksReal?headers.map((h,i)=>({h,i})).filter(x=>x.i!==qCol&&x.i!==aCol&&/(wrong|sai|option|lua chon|nhi[eễ]u|choice)/.test(x.h)).map(x=>x.i):[];
-  return body.map((row,index)=>{const question=row[qCol]?.trim(),answer=row[aCol]?.trim();if(!question||!answer)return null;const wrongs=(wrongCols.length?wrongCols:row.map((_,i)=>i).filter(i=>i!==qCol&&i!==aCol)).map(i=>row[i]?.trim()).filter(Boolean);return {id:`excel-${index}-${question.slice(0,12)}`,question,answer,wrongs}}).filter(Boolean);
+  return body.map((row,index)=>excelQuestionFromRow(row,index,qCol,aCol,wrongCols)).filter(Boolean);
 }
 function prepareExcelQuestions(questions){
   const answers=questions.map(q=>q.answer).filter(Boolean);
