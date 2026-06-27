@@ -1363,7 +1363,130 @@ function homeActivityStats(){
   return {deckCount:created.length,totalCards,studied,mastered,studyCount,lastStudiedAt,percent};
 }
 
+// ===== HOME LEARNING DECKS - OpenQuiz style =====
+function ensureHomeLearningStyle(){
+  if(document.querySelector("#hvqHomeLearningStyle"))return;
+  const style=document.createElement("style");
+  style.id="hvqHomeLearningStyle";
+  style.textContent=`
+    .hvq-home-learning-wrap{display:flex;flex-direction:column;gap:18px}
+    .hvq-home-learning-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+    .hvq-home-learning-actions .button{
+      min-height:58px;border-radius:16px;font-size:18px;font-weight:900;justify-content:center;gap:12px
+    }
+    .hvq-home-learning-actions .button.primary{background:#020617;color:#fff;border-color:#020617}
+    .hvq-home-segment{display:grid;grid-template-columns:1fr 1fr;gap:0;padding:5px;border-radius:18px;background:rgba(226,232,240,.86)}
+    .hvq-home-segment button{border:0;border-radius:14px;background:transparent;min-height:44px;font-weight:900;color:#64748b;cursor:pointer}
+    .hvq-home-segment button.active{background:#fff;color:#111827;box-shadow:0 1px 6px rgba(15,23,42,.08)}
+    .hvq-home-section-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:4px}
+    .hvq-home-section-head h2{margin:0;font-size:24px;font-weight:950;color:#f8fafc;letter-spacing:-.02em}
+    .hvq-home-section-head button{border:0;background:transparent;color:#cbd5e1;font-size:17px;font-weight:800;cursor:pointer;white-space:nowrap}
+    .hvq-home-deck-scroll{display:flex;gap:16px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;padding:4px 2px 12px;margin:0 -2px;-webkit-overflow-scrolling:touch}
+    .hvq-home-deck-scroll::-webkit-scrollbar{display:none}
+    .hvq-home-learning-card{
+      flex:0 0 min(360px,82vw);scroll-snap-align:start;background:#fff;color:#111827;border:1px solid rgba(226,232,240,.9);
+      border-radius:22px;padding:22px 20px;box-shadow:0 12px 30px rgba(15,23,42,.13);cursor:pointer;min-height:218px
+    }
+    .hvq-home-learning-card:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(15,23,42,.18)}
+    .hvq-home-deck-title{font-size:22px;line-height:1.18;font-weight:950;letter-spacing:-.02em;color:#111827;margin:0 0 28px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .hvq-home-deck-lang{font-size:15.5px;color:#6b7280;font-weight:700;margin-bottom:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .hvq-home-progress-row{display:flex;align-items:center;gap:12px;margin-bottom:13px}
+    .hvq-home-progress-track{flex:1;height:8px;border-radius:999px;background:#e5e7eb;overflow:hidden}
+    .hvq-home-progress-fill{height:100%;border-radius:999px;background:#000;min-width:0}
+    .hvq-home-progress-text{font-size:18px;font-weight:950;color:#111827;white-space:nowrap}
+    .hvq-home-study-time{font-size:15.5px;color:#6b7280;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:7px}
+    .hvq-home-deck-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .hvq-home-pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;background:#f3f4f6;color:#6b7280;padding:8px 13px;font-size:14.5px;font-weight:800;max-width:56%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .hvq-home-empty-card{flex:0 0 min(360px,82vw)}
+    .hvq-home-route-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:2px}
+    .hvq-home-route-head h2{margin:0;font-size:23px;font-weight:950;color:#f8fafc;letter-spacing:-.02em}
+    .hvq-home-route-head button{border:0;background:transparent;color:#cbd5e1;font-size:17px;font-weight:800;cursor:pointer}
+    body.hvq-custom-bg .hvq-home-section-head h2,body.hvq-custom-bg .hvq-home-route-head h2{color:#f8fafc}
+    body:not(.hvq-custom-bg) .hvq-home-section-head h2,body:not(.hvq-custom-bg) .hvq-home-route-head h2{color:#f8fafc}
+    @media(max-width:640px){
+      .grid-dashboard{display:block!important}
+      .grid-dashboard>.stack{margin-bottom:20px}
+      .hvq-home-learning-wrap{gap:16px}
+      .hvq-home-learning-actions{gap:12px}
+      .hvq-home-learning-actions .button{min-height:54px;border-radius:15px;font-size:16px;padding:0 12px}
+      .hvq-home-section-head h2,.hvq-home-route-head h2{font-size:22px}
+      .hvq-home-section-head button,.hvq-home-route-head button{font-size:16px}
+      .hvq-home-learning-card{flex-basis:82vw;min-height:210px;padding:20px 18px;border-radius:20px}
+      .hvq-home-deck-title{font-size:21px;margin-bottom:26px}
+      .hvq-home-deck-scroll{gap:14px;padding-bottom:10px}
+    }
+  `;
+  document.head.appendChild(style);
+}
+function homeDeckDoneCount(index,total){
+  let studied=0,mastered=0;
+  for(let i=0;i<total;i++){
+    const status=state.detailProgress?.[`${index}:${i}`];
+    if(status)studied++;
+    if(status==="mastered")mastered++;
+  }
+  // Ưu tiên số thẻ đã thuộc. Nếu bộ chưa có trạng thái mastered nhưng đã học, dùng số thẻ đã học để thanh tiến trình không bị 0.
+  return mastered||studied;
+}
+function homeLearningDeckItems(){
+  const created=Array.isArray(state.createdDecks)?state.createdDecks:[];
+  const items=created.map((deck,index)=>{
+    const total=Array.isArray(deck.cards)?deck.cards.length:0;
+    const stats=getDeckStudyStats(index);
+    const done=homeDeckDoneCount(index,total);
+    const lastStudiedAt=stats.lastStudiedAt||deck.lastStudiedAt||"";
+    const sortDate=lastStudiedAt||deck.updatedAt||deck.createdAt||"";
+    return {deck,index,total,done,lastStudiedAt,sortDate,studyCount:Number(stats.studyCount)||0};
+  }).filter(x=>x.total>0);
+  const learning=items.filter(x=>x.lastStudiedAt||x.done>0);
+  return (learning.length?learning:items)
+    .sort((a,b)=>String(b.sortDate||"").localeCompare(String(a.sortDate||""))||String(a.deck.title||"").localeCompare(String(b.deck.title||""),"vi",{numeric:true}))
+    .slice(0,10);
+}
+function homeLearningDeckLanguage(deck){
+  const cards=Array.isArray(deck?.cards)?deck.cards:[];
+  const sample=cards.find(c=>String(c?.definition||"").trim())?.definition||"";
+  if(/[가-힣]/.test(sample))return "🇰🇷 Định nghĩa: 한국어";
+  return "🇻🇳 Định nghĩa: Tiếng Việt";
+}
+function homeLearningDeckCards(){
+  const user=currentUser();
+  const items=homeLearningDeckItems();
+  if(!items.length){
+    return `<div class="hvq-home-deck-scroll"><article class="hvq-home-learning-card hvq-home-empty-card" data-route="decks">
+      <h3 class="hvq-home-deck-title">Chưa có bộ từ đang học</h3>
+      <div class="hvq-home-deck-lang">Hãy tạo hoặc nhập một bộ thẻ để nó hiện ở đây.</div>
+      <div class="hvq-home-progress-row"><div class="hvq-home-progress-track"><div class="hvq-home-progress-fill" style="width:0%"></div></div><span class="hvq-home-progress-text">0/0</span></div>
+      <div class="hvq-home-study-time">${icon("clock")} Học lần cuối: Chưa học</div>
+      <div class="hvq-home-deck-bottom"><span class="hvq-home-pill">0 từ</span><span class="hvq-home-pill">${icon("user-round")} ${escapeHtml(user.name||"T- Creation")}</span></div>
+    </article></div>`;
+  }
+  return `<div class="hvq-home-deck-scroll">${items.map(({deck,index,total,done,lastStudiedAt})=>{
+    const pct=total?Math.min(100,Math.round(done/total*100)):0;
+    return `<article class="hvq-home-learning-card" data-created-deck="${index}">
+      <h3 class="hvq-home-deck-title">${escapeHtml(deck.title||"Bộ từ chưa đặt tên")}</h3>
+      <div class="hvq-home-deck-lang">${homeLearningDeckLanguage(deck)}</div>
+      <div class="hvq-home-progress-row"><div class="hvq-home-progress-track"><div class="hvq-home-progress-fill" style="width:${pct}%"></div></div><span class="hvq-home-progress-text">${done}/${total}</span></div>
+      <div class="hvq-home-study-time">${icon("clock")} Học lần cuối: ${formatLastStudied(lastStudiedAt)}</div>
+      <div class="hvq-home-deck-bottom"><span class="hvq-home-pill">${total} từ</span><span class="hvq-home-pill">${icon("user-round")} ${escapeHtml(user.name||"T- Creation")}</span></div>
+    </article>`;
+  }).join("")}</div>`;
+}
+function homeLearningSection(){
+  return `<section class="hvq-home-learning-wrap">
+    <div class="hvq-home-learning-actions">
+      <button class="button primary" data-action="new-deck">${icon("plus")} Tạo Bộ thẻ</button>
+      <button class="button" data-route="courses">${icon("book-open")} Tạo lộ trình</button>
+    </div>
+    <div class="hvq-home-segment"><button class="active" type="button">Đang học</button><button type="button" data-route="courses">Lộ trình gợi ý</button></div>
+    <div class="hvq-home-section-head"><h2>Bộ từ đang học</h2><button type="button" data-route="decks">Xem tất cả</button></div>
+    ${homeLearningDeckCards()}
+    <div class="hvq-home-route-head"><h2>Lộ trình đang học</h2><button type="button" data-route="courses">Xem tất cả</button></div>
+  </section>`;
+}
+
 function homePage(){
+  ensureHomeLearningStyle();
   const user=currentUser(),firstName=user.name.split(/\s+/).filter(Boolean).slice(-1)[0]||user.name;
   const loginAction=user.signedIn?"":button(`${icon("log-in")} Đăng nhập Google`,"sign-in-google");
   const real=homeActivityStats();
@@ -1374,7 +1497,7 @@ function homePage(){
       <section class="card section-card"><div class="section-title"><h2>${icon("star")} Cấp độ</h2><span class="pill">Lv.12</span></div><strong>Học giả Hán Việt</strong><p class="muted text-xs my-2">${state.xp.toLocaleString()} / 3.000 XP</p>${progress(state.xp/30)}</section>
     </div>
     <div class="stack">
-      <section><div class="section-title"><h2>${icon("layers")} Bộ từ đang học</h2><button class="button small" data-route="decks">Xem tất cả</button></div>${deckCards(4)}</section>
+      ${homeLearningSection()}
       <section><div class="section-title"><h2>${icon("graduation-cap")} Khóa đang học</h2><button class="button small" data-route="courses">Xem tất cả</button></div><div class="stack gap-3">${courseRows()}</div></section>
     </div>
     <div class="stack">
