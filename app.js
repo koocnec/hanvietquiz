@@ -315,6 +315,116 @@ function ensureFixedTopbarStyle(){
     body.hvq-topbar-fixed #mainSidebar,
     body.hvq-topbar-fixed #toolSidebar{padding-top:12px}
 
+    
+    
+
+    /* Căn lại cụm bên phải của top bar: Đổi hình nền / tìm kiếm / thông báo / profile */
+    .hvq-fixed-topbar{
+      flex-direction:row!important;
+      align-items:center!important;
+      gap:14px!important;
+      overflow:visible!important;
+    }
+    .hvq-fixed-topbar #topNav{
+      flex:1 1 auto!important;
+      min-width:0!important;
+    }
+    #hvqTopbarRightActions{
+      margin-left:auto!important;
+      margin-right:14px!important;
+      padding-right:0!important;
+      min-height:var(--hvq-topbar-height)!important;
+      display:flex!important;
+      flex-direction:row!important;
+      align-items:center!important;
+      justify-content:flex-end!important;
+      gap:10px!important;
+      flex:0 0 auto!important;
+      white-space:nowrap!important;
+      position:static!important;
+      visibility:visible!important;
+      opacity:1!important;
+      z-index:2147483002!important;
+    }
+    #hvqTopbarRightActions > *{
+      position:static!important;
+      float:none!important;
+      transform:none!important;
+      margin-top:0!important;
+      margin-bottom:0!important;
+      display:inline-flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      visibility:visible!important;
+      opacity:1!important;
+    }
+    #hvqQuickBackgroundButton{
+      display:inline-flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      gap:8px!important;
+      min-height:38px!important;
+      padding:0 12px!important;
+      color:#e5e7eb!important;
+      background:transparent!important;
+      border:0!important;
+      border-radius:12px!important;
+      font-weight:700!important;
+      cursor:pointer!important;
+      white-space:nowrap!important;
+    }
+    #hvqQuickBackgroundButton:hover{background:rgba(148,163,184,.14)!important}
+    .hvq-fixed-topbar #searchButton,
+    .hvq-fixed-topbar #notificationButton{
+      width:38px!important;
+      height:38px!important;
+      min-width:38px!important;
+      border-radius:12px!important;
+      color:#cbd5e1!important;
+      background:transparent!important;
+    }
+    .hvq-fixed-topbar #profileButton{
+      min-height:40px!important;
+      padding:0 10px!important;
+      border-radius:14px!important;
+      color:#f8fafc!important;
+      background:transparent!important;
+      gap:8px!important;
+    }
+    .hvq-fixed-topbar #profileButton .avatar,
+    .hvq-fixed-topbar #profileButton img.avatar{
+      width:34px!important;
+      height:34px!important;
+      min-width:34px!important;
+    }
+    @media(max-width:980px){
+      #hvqQuickBackgroundButton span{display:none!important}
+      #hvqTopbarRightActions{gap:6px!important;margin-right:8px!important}
+    }
+
+    /* Xóa gạch chân dưới tab đang chọn trên thanh menu trên cùng */
+    .hvq-fixed-topbar .nav-button,
+    .hvq-fixed-topbar .nav-button.active,
+    .hvq-fixed-topbar [data-route]{
+      text-decoration:none!important;
+      border-bottom:0!important;
+      box-shadow:none!important;
+    }
+    .hvq-fixed-topbar .nav-button::after,
+    .hvq-fixed-topbar .nav-button.active::after,
+    .hvq-fixed-topbar [data-route]::after{
+      display:none!important;
+      content:none!important;
+      width:0!important;
+      height:0!important;
+      border:0!important;
+      background:transparent!important;
+    }
+
+    .page-header.hvq-fixed-topbar{position:static!important;display:flex!important;background:transparent!important;border-bottom:0!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;z-index:auto!important;min-height:auto!important;width:auto!important}
+    #topNav{display:flex!important;align-items:center!important;visibility:visible!important;opacity:1!important}
+    .hvq-fixed-topbar #topNav{display:flex!important}
+
     #hvqQuickBackgroundButton .iconify{font-size:18px}
     #hvqQuickBackgroundPanel{
       position:fixed;
@@ -344,47 +454,48 @@ function ensureFixedTopbarStyle(){
 }
 function findTopbarElement(){
   const topNav=document.querySelector("#topNav");
-  const profile=document.querySelector("#profileButton");
-  const search=document.querySelector("#searchButton");
-  const notification=document.querySelector("#notificationButton");
+  if(!topNav)return null;
 
-  // Chỉ chọn thanh bar thật sự có #topNav / profile / search.
-  // Không được lấy header chung của trang, vì nó có thể là tiêu đề "Đã tạo".
-  const anchors=[topNav,profile,search,notification].filter(Boolean);
-  for(const anchor of anchors){
-    const candidates=[
-      anchor.closest(".topbar"),
-      anchor.closest(".app-header"),
-      anchor.closest(".header-bar"),
-      anchor.closest("header"),
-      anchor.parentElement?.parentElement,
-      anchor.parentElement
-    ].filter(Boolean);
-
-    for(const el of candidates){
-      if(!el || el===document.body || el===document.documentElement)continue;
-      const hasNav=!!el.querySelector?.("#topNav");
-      const hasRight=!!el.querySelector?.("#profileButton,#searchButton,#notificationButton");
-      const looksLikePageHeader=!!el.querySelector?.(".page-header") || /^Đã tạo|Trang chủ|Khóa học|Quiz/i.test((el.textContent||"").trim());
-      if((hasNav||hasRight) && !looksLikePageHeader)return el;
+  // Chỉ nhận thanh chứa #topNav. Tuyệt đối không lấy header nội dung như "Xin chào, Khách" hoặc "Đã tạo".
+  let el=topNav;
+  for(let depth=0; depth<5 && el && el!==document.body && el!==document.documentElement; depth++, el=el.parentElement){
+    const hasTopNav=!!el.querySelector?.("#topNav");
+    const hasPageHeader=!!el.querySelector?.(".page-header");
+    const text=(el.textContent||"").trim();
+    const isContentHeader=/^(Xin chào|Đã tạo|Trang chủ|Khoá học|Khóa học|Quiz|Nhập liệu|Luyện tập)/i.test(text);
+    if(hasTopNav && !hasPageHeader && !isContentHeader){
+      return el;
     }
   }
-  return null;
+  return topNav.parentElement || null;
 }
+
 
 function ensureFixedTopbar(){
   ensureFixedTopbarStyle();
-  const topbar=document.querySelector(".hvq-fixed-topbar")||findTopbarElement();
 
-  if(!topbar){
+  // Khôi phục mọi page-header nếu lỡ bị fixed từ bản cũ.
+  document.querySelectorAll(".page-header").forEach(el=>{
+    el.classList.remove("hvq-fixed-topbar");
+    el.style.removeProperty("position");
+    el.style.removeProperty("top");
+    el.style.removeProperty("left");
+    el.style.removeProperty("right");
+    el.style.removeProperty("z-index");
+    el.style.removeProperty("width");
+    el.style.removeProperty("display");
+    el.style.removeProperty("visibility");
+    el.style.removeProperty("opacity");
+  });
+
+  const topbar=findTopbarElement();
+  if(!topbar || !topbar.querySelector?.("#topNav")){
     document.body.classList.remove("hvq-topbar-fixed");
-    ensureTopBackgroundButton(null);
     return;
   }
 
   document.body.classList.add("hvq-topbar-fixed");
 
-  // Không di chuyển page header nữa. Chỉ fixed đúng thanh bar có menu điều hướng.
   topbar.classList.add("hvq-fixed-topbar");
   topbar.style.setProperty("display","flex","important");
   topbar.style.setProperty("align-items","center","important");
@@ -400,18 +511,11 @@ function ensureFixedTopbar(){
   ensureTopBackgroundButton(topbar);
 }
 
-function ensureTopBackgroundButton(topbar=null){
-  let btn=document.querySelector("#hvqQuickBackgroundButton");
-  if(!btn){
-    btn=document.createElement("button");
-    btn.id="hvqQuickBackgroundButton";
-    btn.type="button";
-    btn.className="hvq-top-bg-button";
-    btn.dataset.action="quick-background";
-    btn.innerHTML=`${icon("image")}<span>Đổi hình nền</span>`;
-  }
 
+function ensureTopBackgroundButton(topbar=null){
   topbar = topbar || document.querySelector(".hvq-fixed-topbar") || findTopbarElement();
+  if(!topbar)return;
+
   let rightHost=document.querySelector("#hvqTopbarRightActions");
   if(!rightHost){
     rightHost=document.createElement("div");
@@ -419,23 +523,43 @@ function ensureTopBackgroundButton(topbar=null){
     rightHost.className="hvq-topbar-right-actions";
   }
 
+  if(!topbar.contains(rightHost)){
+    topbar.appendChild(rightHost);
+  }
+
+  let bgBtn=document.querySelector("#hvqQuickBackgroundButton");
+  if(!bgBtn){
+    bgBtn=document.createElement("button");
+    bgBtn.id="hvqQuickBackgroundButton";
+    bgBtn.type="button";
+    bgBtn.className="hvq-top-bg-button";
+    bgBtn.dataset.action="quick-background";
+    bgBtn.innerHTML=`${icon("image")}<span>Đổi hình nền</span>`;
+  }
+
   const search=document.querySelector("#searchButton");
   const notification=document.querySelector("#notificationButton");
   const profile=document.querySelector("#profileButton");
 
-  if(topbar && !topbar.contains(rightHost)) topbar.appendChild(rightHost);
-  if(!rightHost.contains(btn)) rightHost.appendChild(btn);
-
-  // Đưa các nút cũ vào khu vực bên phải nếu tồn tại, tránh bị biến mất khi fixed topbar.
-  [search,notification,profile].forEach(el=>{
-    if(el && !rightHost.contains(el)) rightHost.appendChild(el);
-    if(el){
-      el.style.removeProperty("display");
-      el.style.setProperty("visibility","visible","important");
-      el.style.setProperty("opacity","1","important");
-    }
+  // Đưa đúng thứ tự: Đổi hình nền | Tìm kiếm | Thông báo | Profile
+  [bgBtn,search,notification,profile].forEach(el=>{
+    if(!el)return;
+    if(!rightHost.contains(el))rightHost.appendChild(el);
+    el.classList.remove("hvq-old-logo-hidden");
+    el.style.setProperty("display","inline-flex","important");
+    el.style.setProperty("align-items","center","important");
+    el.style.setProperty("justify-content","center","important");
+    el.style.setProperty("visibility","visible","important");
+    el.style.setProperty("opacity","1","important");
+    el.style.removeProperty("position");
+    el.style.removeProperty("top");
+    el.style.removeProperty("left");
+    el.style.removeProperty("right");
+    el.style.removeProperty("bottom");
+    el.style.removeProperty("transform");
   });
 }
+
 
 function closeQuickBackgroundPanel(){document.querySelector("#hvqQuickBackgroundPanel")?.remove()}
 function openQuickBackgroundPanel(){
@@ -1800,7 +1924,7 @@ document.querySelector("#profileButton").onclick=e=>{e.stopPropagation();documen
 document.querySelector("#notificationMenu").innerHTML=`<strong class="block p-3">Thông báo</strong><button class="dropdown-item">🔥 Chuỗi ${state.streak} ngày — tiếp tục nhé!</button><button class="dropdown-item">TOPIK II vừa có bài học mới</button>`;
 document.querySelector("#profileMenu").innerHTML=`<button class="dropdown-item" data-route="settings">Hồ sơ & cài đặt</button><button class="dropdown-item" data-action="upgrade">Nâng cấp Pro</button><button class="dropdown-item text-red-400">Đăng xuất</button>`;
 document.querySelector("#searchButton").onclick=()=>modal("Tìm kiếm nhanh",`<input id="globalSearch" class="input" autofocus placeholder="Tìm khóa học, bộ từ, từ vựng..."><div class="search-results">${decks.slice(0,3).map(d=>`<button class="dropdown-item" data-deck="${d.id}">${d.icon} ${d.name}</button>`).join("")}</div>`);
-document.addEventListener("click",e=>{if(!e.target.closest("#notificationButton")&&!e.target.closest("#notificationMenu"))document.querySelector("#notificationMenu").classList.remove("show");if(!e.target.closest("#profileButton")&&!e.target.closest("#profileMenu"))document.querySelector("#profileMenu").classList.remove("show");if(!e.target.closest("#hvqQuickBackgroundButton")&&!e.target.closest("#hvqQuickBackgroundPanel"))closeQuickBackgroundPanel()});
+document.addEventListener("click",e=>{if(!e.target.closest("#notificationButton")&&!e.target.closest("#notificationMenu"))document.querySelector("#notificationMenu")?.classList.remove("show");if(!e.target.closest("#profileButton")&&!e.target.closest("#profileMenu"))document.querySelector("#profileMenu")?.classList.remove("show");if(!e.target.closest("#hvqQuickBackgroundButton")&&!e.target.closest("#hvqQuickBackgroundPanel"))closeQuickBackgroundPanel()});
 
 async function initApp(){await loadCreatedDecks();render();setTimeout(applyCustomLogo,0)}
 initApp();
