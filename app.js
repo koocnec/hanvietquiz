@@ -91,7 +91,7 @@ const HVQ_PERSONAL_SCOPE_VERSION="v7";
 // 2) Deploy dạng Web app: Execute as Me, Who has access: Anyone.
 // 3) Dán URL /exec vào đây, ví dụ: const HVQ_CLOUD_SYNC_URL="https://script.google.com/macros/s/AKfycb.../exec";
 // Khi để trống, app vẫn chạy bình thường nhưng dữ liệu chỉ lưu trên từng thiết bị.
-const HVQ_CLOUD_SYNC_URL="";
+const HVQ_CLOUD_SYNC_URL="https://script.google.com/macros/s/AKfycbz6vt-7sjdo1sWL-B9LriOf6rwn2E3sy2dgqZstMD-m0Kn95Q2WE8NL721ON9UJOj7x7g/exec";
 const HVQ_CLOUD_SYNC_APP="hanvietquiz";
 const HVQ_PERSONAL_FIELDS=[
   "activeCreatedDeck","activeCreatedFolder","detailCardIndex","detailFlipped","detailMode","detailSearch","detailFilter","detailSort",
