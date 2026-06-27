@@ -318,6 +318,43 @@ function ensureFixedTopbarStyle(){
     
     
 
+
+    /* GitHub Pages fix: giữ cụm phải nằm ngang, không bị xếp dọc/làm tối màn hình */
+    .hvq-fixed-topbar{
+      height:var(--hvq-topbar-height)!important;
+      min-height:var(--hvq-topbar-height)!important;
+      max-height:var(--hvq-topbar-height)!important;
+      flex-direction:row!important;
+      align-items:center!important;
+      overflow:visible!important;
+    }
+    #hvqTopbarRightActions{
+      display:flex!important;
+      flex-direction:row!important;
+      align-items:center!important;
+      justify-content:flex-end!important;
+      gap:10px!important;
+      margin-left:auto!important;
+      height:var(--hvq-topbar-height)!important;
+      min-height:var(--hvq-topbar-height)!important;
+      position:static!important;
+      float:none!important;
+      transform:none!important;
+      white-space:nowrap!important;
+    }
+    #hvqTopbarRightActions > *{
+      display:inline-flex!important;
+      flex-direction:row!important;
+      align-items:center!important;
+      justify-content:center!important;
+      position:static!important;
+      float:none!important;
+      transform:none!important;
+      margin:0!important;
+      visibility:visible!important;
+      opacity:1!important;
+    }
+
     /* Căn lại cụm bên phải của top bar: Đổi hình nền / tìm kiếm / thông báo / profile */
     .hvq-fixed-topbar{
       flex-direction:row!important;
@@ -516,6 +553,26 @@ function ensureTopBackgroundButton(topbar=null){
   topbar = topbar || document.querySelector(".hvq-fixed-topbar") || findTopbarElement();
   if(!topbar)return;
 
+  // Khóa chiều cao topbar để GitHub không làm nó phình xuống thành lớp phủ tối.
+  topbar.style.setProperty("height","var(--hvq-topbar-height)","important");
+  topbar.style.setProperty("min-height","var(--hvq-topbar-height)","important");
+  topbar.style.setProperty("max-height","var(--hvq-topbar-height)","important");
+  topbar.style.setProperty("display","flex","important");
+  topbar.style.setProperty("flex-direction","row","important");
+  topbar.style.setProperty("align-items","center","important");
+  topbar.style.setProperty("gap","14px","important");
+  topbar.style.setProperty("overflow","visible","important");
+
+  const topNav=document.querySelector("#topNav");
+  if(topNav){
+    topNav.style.setProperty("display","flex","important");
+    topNav.style.setProperty("flex-direction","row","important");
+    topNav.style.setProperty("align-items","center","important");
+    topNav.style.setProperty("gap","6px","important");
+    topNav.style.setProperty("flex","1 1 auto","important");
+    topNav.style.setProperty("min-width","0","important");
+  }
+
   let rightHost=document.querySelector("#hvqTopbarRightActions");
   if(!rightHost){
     rightHost=document.createElement("div");
@@ -526,6 +583,25 @@ function ensureTopBackgroundButton(topbar=null){
   if(!topbar.contains(rightHost)){
     topbar.appendChild(rightHost);
   }
+
+  // Ép layout bằng inline style để khi chạy GitHub cũng giống localhost.
+  rightHost.style.setProperty("display","flex","important");
+  rightHost.style.setProperty("flex-direction","row","important");
+  rightHost.style.setProperty("align-items","center","important");
+  rightHost.style.setProperty("justify-content","flex-end","important");
+  rightHost.style.setProperty("gap","10px","important");
+  rightHost.style.setProperty("margin-left","auto","important");
+  rightHost.style.setProperty("margin-right","14px","important");
+  rightHost.style.setProperty("padding","0","important");
+  rightHost.style.setProperty("height","var(--hvq-topbar-height)","important");
+  rightHost.style.setProperty("min-height","var(--hvq-topbar-height)","important");
+  rightHost.style.setProperty("position","static","important");
+  rightHost.style.setProperty("float","none","important");
+  rightHost.style.setProperty("transform","none","important");
+  rightHost.style.setProperty("white-space","nowrap","important");
+  rightHost.style.setProperty("visibility","visible","important");
+  rightHost.style.setProperty("opacity","1","important");
+  rightHost.style.setProperty("z-index","2147483002","important");
 
   let bgBtn=document.querySelector("#hvqQuickBackgroundButton");
   if(!bgBtn){
@@ -541,24 +617,46 @@ function ensureTopBackgroundButton(topbar=null){
   const notification=document.querySelector("#notificationButton");
   const profile=document.querySelector("#profileButton");
 
-  // Đưa đúng thứ tự: Đổi hình nền | Tìm kiếm | Thông báo | Profile
   [bgBtn,search,notification,profile].forEach(el=>{
     if(!el)return;
     if(!rightHost.contains(el))rightHost.appendChild(el);
     el.classList.remove("hvq-old-logo-hidden");
     el.style.setProperty("display","inline-flex","important");
+    el.style.setProperty("flex-direction","row","important");
     el.style.setProperty("align-items","center","important");
     el.style.setProperty("justify-content","center","important");
     el.style.setProperty("visibility","visible","important");
     el.style.setProperty("opacity","1","important");
-    el.style.removeProperty("position");
-    el.style.removeProperty("top");
-    el.style.removeProperty("left");
-    el.style.removeProperty("right");
-    el.style.removeProperty("bottom");
-    el.style.removeProperty("transform");
+    el.style.setProperty("position","static","important");
+    el.style.setProperty("float","none","important");
+    el.style.setProperty("transform","none","important");
+    el.style.setProperty("margin","0","important");
+    el.style.setProperty("white-space","nowrap","important");
   });
+
+  if(bgBtn){
+    bgBtn.style.setProperty("height","38px","important");
+    bgBtn.style.setProperty("min-height","38px","important");
+    bgBtn.style.setProperty("padding","0 12px","important");
+    bgBtn.style.setProperty("gap","8px","important");
+  }
+  if(search){
+    search.style.setProperty("width","38px","important");
+    search.style.setProperty("height","38px","important");
+    search.style.setProperty("min-width","38px","important");
+  }
+  if(notification){
+    notification.style.setProperty("width","38px","important");
+    notification.style.setProperty("height","38px","important");
+    notification.style.setProperty("min-width","38px","important");
+  }
+  if(profile){
+    profile.style.setProperty("min-height","40px","important");
+    profile.style.setProperty("padding","0 10px","important");
+    profile.style.setProperty("gap","8px","important");
+  }
 }
+
 
 
 function closeQuickBackgroundPanel(){document.querySelector("#hvqQuickBackgroundPanel")?.remove()}
