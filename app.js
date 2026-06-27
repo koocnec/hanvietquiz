@@ -91,7 +91,7 @@ const HVQ_PERSONAL_SCOPE_VERSION="v7";
 // 2) Deploy dạng Web app: Execute as Me, Who has access: Anyone.
 // 3) Dán URL /exec vào đây, ví dụ: const HVQ_CLOUD_SYNC_URL="https://script.google.com/macros/s/AKfycb.../exec";
 // Khi để trống, app vẫn chạy bình thường nhưng dữ liệu chỉ lưu trên từng thiết bị.
-const HVQ_CLOUD_SYNC_URL="https://script.google.com/macros/s/AKfycbz6vt-7sjdo1sWL-B9LriOf6rwn2E3sy2dgqZstMD-m0Kn95Q2WE8NL721ON9UJOj7x7g/exec";
+const HVQ_CLOUD_SYNC_URL="";
 const HVQ_CLOUD_SYNC_APP="hanvietquiz";
 const HVQ_PERSONAL_FIELDS=[
   "activeCreatedDeck","activeCreatedFolder","detailCardIndex","detailFlipped","detailMode","detailSearch","detailFilter","detailSort",
@@ -1363,6 +1363,7 @@ function homeActivityStats(){
   return {deckCount:created.length,totalCards,studied,mastered,studyCount,lastStudiedAt,percent};
 }
 
+
 // ===== HOME LEARNING DECKS - OpenQuiz style =====
 function ensureHomeLearningStyle(){
   if(document.querySelector("#hvqHomeLearningStyle"))return;
@@ -1494,7 +1495,6 @@ function homePage(){
   `<div class="grid-dashboard">
     <div class="stack">
       <section class="card section-card"><div class="section-title"><h2>${icon("activity")} Hoạt động học tập</h2></div><div class="stats-grid"><div class="stat"><strong class="text-indigo-400">${real.studied}</strong><small>Thẻ đã học</small></div><div class="stat"><strong class="text-emerald-400">${real.mastered}</strong><small>Đã thuộc</small></div></div><div class="mt-4"><div class="flex justify-between text-xs mb-2"><span>Tiến độ bộ thẻ tự tạo</span><span>${real.percent}%</span></div>${progress(real.percent)}</div><div class="mt-5 p-4 rounded-xl bg-amber-500/10"><strong>${icon("folder-check")} ${real.deckCount} bộ · ${real.totalCards} thẻ</strong><p class="muted text-xs mt-1">Lần học gần nhất: ${formatLastStudied(real.lastStudiedAt)} · Tổng lượt học: ${real.studyCount}</p></div></section>
-      <section class="card section-card"><div class="section-title"><h2>${icon("star")} Cấp độ</h2><span class="pill">Lv.12</span></div><strong>Học giả Hán Việt</strong><p class="muted text-xs my-2">${state.xp.toLocaleString()} / 3.000 XP</p>${progress(state.xp/30)}</section>
     </div>
     <div class="stack">
       ${homeLearningSection()}
@@ -2406,6 +2406,32 @@ document.addEventListener("keydown",e=>{
   e.preventDefault();
   goBackPage();
 },true);
+
+// HVQ_MOBILE_SWIPE_BACK_V1 - vuốt từ mép trái sang phải trên mobile để quay lại trang trước
+(function setupMobileSwipeBack(){
+  if(window.__hvqMobileSwipeBackReady)return;
+  window.__hvqMobileSwipeBackReady=true;
+  let sx=0,sy=0,st=0,tracking=false;
+  const isMobile=()=>window.matchMedia?.("(max-width:768px)")?.matches||("ontouchstart" in window);
+  const blockedTarget=target=>!!target?.closest?.("input,textarea,select,[contenteditable='true'],#modal,.modal-overlay,#hvqQuickBackgroundPanel");
+  document.addEventListener("touchstart",e=>{
+    if(!isMobile()||e.touches.length!==1||blockedTarget(e.target))return;
+    const t=e.touches[0];
+    sx=t.clientX;sy=t.clientY;st=Date.now();
+    tracking=sx<=55;
+  },{passive:true});
+  document.addEventListener("touchend",e=>{
+    if(!tracking)return;
+    tracking=false;
+    const t=e.changedTouches&&e.changedTouches[0];
+    if(!t)return;
+    const dx=t.clientX-sx,dy=t.clientY-sy,dt=Date.now()-st;
+    if(dx>=85&&Math.abs(dy)<=70&&dt<=900){
+      e.preventDefault?.();
+      goBackPage();
+    }
+  },{passive:false});
+})();
 
 function selectPractice(name){document.querySelectorAll("[data-practice-tab]").forEach(x=>x.classList.toggle("active",x.dataset.practiceTab===name));document.querySelector("#practicePanel").innerHTML=name==="quiz"?quizPanel():name==="dictionary"?dictionaryPanel():flashcardPanel()}
 function excelActiveQuestions(){
