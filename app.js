@@ -60,7 +60,7 @@ const savedInputColumns={
   "ngu phap":{termCol:"D",meaningCol:"E",exampleCol:"F",synonymCol:"G",mergeRows:true}
 };
 const defaultInputData={sourceType:"sheet",sheetUrl:savedInputSheets.NhapLieu,savedSheet:"NhapLieu",termCol:"B",meaningCol:"A",exampleCol:"C",synonymCol:"",autoDetect:true,mergeRows:false,folderSize:50,lastFileName:"",selected:true,lastAppliedAt:"",lastResult:null};
-const defaultState={route:"home",streak:7,today:146,minutes:42,xp:2340,quizIndex:0,quizScore:0,quizAnswered:null,flashIndex:0,activeCreatedDeck:null,activeCreatedFolder:"",detailCardIndex:0,detailFlipped:false,detailMode:"flashcard",detailSearch:"",detailFilter:"all",detailSort:"original",detailProgress:{},detailStars:{},deckStudyStats:{},learnOrder:[],learnIndex:0,learnOptions:[],learnAnswered:null,learnCorrect:0,learnUnknown:0,learnCompleted:0,learnSessionStats:blankLearnSessionStats(),learnSettings:defaultLearnSettings,excelQuiz:defaultExcelQuiz,inputData:defaultInputData,theme:"dark",dailyGoal:30,notifications:true,background:defaultBackground,calendar:[2,4,6,8,10,12,14,16,18,20,22,24,26],favorites:[1,2],user:defaultUser,createdDecks:[],deckDraft:{title:"",description:"",isPublic:false,suggestions:true,cards:[blankDraftCard()]}};
+const defaultState={route:"home",lastOpenedTab:"decks",streak:7,today:146,minutes:42,xp:2340,quizIndex:0,quizScore:0,quizAnswered:null,flashIndex:0,activeCreatedDeck:null,activeCreatedFolder:"",detailCardIndex:0,detailFlipped:false,detailMode:"flashcard",detailSearch:"",detailFilter:"all",detailSort:"original",detailProgress:{},detailStars:{},deckStudyStats:{},learnOrder:[],learnIndex:0,learnOptions:[],learnAnswered:null,learnCorrect:0,learnUnknown:0,learnCompleted:0,learnSessionStats:blankLearnSessionStats(),learnSettings:defaultLearnSettings,excelQuiz:defaultExcelQuiz,inputData:defaultInputData,theme:"dark",dailyGoal:30,notifications:true,background:defaultBackground,calendar:[2,4,6,8,10,12,14,16,18,20,22,24,26],favorites:[1,2],user:defaultUser,createdDecks:[],deckDraft:{title:"",description:"",isPublic:false,suggestions:true,cards:[blankDraftCard()]}};
 const googleClientId=document.querySelector('meta[name="google-signin-client_id"]')?.content?.trim()||"";
 const freshDefaultState=()=>JSON.parse(JSON.stringify(defaultState));
 const storedState=JSON.parse(localStorage.getItem("hvq-state")||"{}");
@@ -91,7 +91,7 @@ const HVQ_PERSONAL_SCOPE_VERSION="v7";
 // 2) Deploy dạng Web app: Execute as Me, Who has access: Anyone.
 // 3) Dán URL /exec vào đây, ví dụ: const HVQ_CLOUD_SYNC_URL="https://script.google.com/macros/s/AKfycb.../exec";
 // Khi để trống, app vẫn chạy bình thường nhưng dữ liệu chỉ lưu trên từng thiết bị.
-const HVQ_CLOUD_SYNC_URL="https://script.google.com/macros/s/AKfycbz6vt-7sjdo1sWL-B9LriOf6rwn2E3sy2dgqZstMD-m0Kn95Q2WE8NL721ON9UJOj7x7g/exec";
+const HVQ_CLOUD_SYNC_URL="";
 const HVQ_CLOUD_SYNC_APP="hanvietquiz";
 const HVQ_PERSONAL_FIELDS=[
   "activeCreatedDeck","activeCreatedFolder","detailCardIndex","detailFlipped","detailMode","detailSearch","detailFilter","detailSort",
@@ -1324,18 +1324,53 @@ function goBackPage(){
   showToast("Không còn trang trước","arrow-left");
 }
 function isTextEditingTarget(el=document.activeElement){return !!el&&(["INPUT","TEXTAREA","SELECT"].includes(el.tagName)||el.isContentEditable)}
-function routeTo(route){if(!routes[route])route="home";state.route=route;save();render()}
+function hvqStudyRouteCandidates(){return ["learnSession","deckDetail","decks","inputData","quizExcel","practice"]}
+function rememberLastOpenedTabFromRoute(route=state.route){
+  if(hvqStudyRouteCandidates().includes(route))state.lastOpenedTab=route;
+}
+function openLastStudyTab(){
+  const valid=hvqStudyRouteCandidates();
+  let target=valid.includes(state.lastOpenedTab)?state.lastOpenedTab:"decks";
+  if((target==="deckDetail"||target==="learnSession")&&(!Number.isInteger(state.activeCreatedDeck)||!state.createdDecks?.[state.activeCreatedDeck]))target="decks";
+  if(target==="learnSession"&&(!Array.isArray(state.learnOrder)||!state.learnOrder.length))target="deckDetail";
+  if(target==="deckDetail"&&(!Number.isInteger(state.activeCreatedDeck)||!state.createdDecks?.[state.activeCreatedDeck]))target="decks";
+  state.route=target;
+  state.flashIndex=0;
+  save();
+  render();
+}
+function routeTo(route){if(!routes[route])route="home";if(route!=="home")rememberLastOpenedTabFromRoute(route);state.route=route;save();render()}
 
 function deckCards(limit=99){return `<div class="deck-grid">${decks.slice(0,limit).map(d=>{const pct=Math.round(d.learned/d.total*100);return `<article class="card card-hover deck-card" data-deck="${d.id}"><div class="flex justify-between"><span class="text-xl">${d.icon}</span><span class="pill">${d.newCount} mới</span></div><h3>${d.name}</h3><p>${d.term} · ${d.learned}/${d.total}</p><div class="mt-3">${progress(pct)}</div><div class="flex justify-between items-center mt-2"><small class="muted">${pct}%</small><button class="button small" data-study="${d.id}">Học</button></div></article>`}).join("")}</div>`}
 function courseRows(){return courses.map(c=>{const pct=Math.round(c.done/c.lessons*100);return `<article class="card card-hover course-row" data-course="${c.id}"><span class="item-icon">${c.icon}</span><div class="row-main"><h3>${c.name}</h3><p>${c.level} · ${c.done}/${c.lessons} bài</p><div class="mt-2">${progress(pct)}</div></div><strong class="text-indigo-400">${pct}%</strong></article>`}).join("")}
 
+function homeActivityStats(){
+  const created=Array.isArray(state.createdDecks)?state.createdDecks:[];
+  let totalCards=0,mastered=0,studied=0,studyCount=0,lastStudiedAt="";
+  created.forEach((deck,index)=>{
+    const cards=Array.isArray(deck.cards)?deck.cards:[];
+    totalCards+=cards.length;
+    const stats=getDeckStudyStats(index);
+    studyCount+=Number(stats.studyCount)||0;
+    if(stats.lastStudiedAt&&String(stats.lastStudiedAt)>String(lastStudiedAt))lastStudiedAt=stats.lastStudiedAt;
+    cards.forEach((_,cardIndex)=>{
+      const status=state.detailProgress?.[`${index}:${cardIndex}`];
+      if(status){studied++}
+      if(status==="mastered")mastered++;
+    });
+  });
+  const percent=totalCards?Math.round(mastered/totalCards*100):0;
+  return {deckCount:created.length,totalCards,studied,mastered,studyCount,lastStudiedAt,percent};
+}
+
 function homePage(){
   const user=currentUser(),firstName=user.name.split(/\s+/).filter(Boolean).slice(-1)[0]||user.name;
   const loginAction=user.signedIn?"":button(`${icon("log-in")} Đăng nhập Google`,"sign-in-google");
-  return header(`Xin chào, ${escapeHtml(firstName)} 👋`,"Hãy tiếp tục hành trình chinh phục Hán Việt nhé!",loginAction+button(`${icon("rotate-ccw")} Ôn tập nhanh`,"review")+button(`${icon("play")} Học ngay`,"study","primary"))+
+  const real=homeActivityStats();
+  return header(`Xin chào, ${escapeHtml(firstName)} 👋`,"",loginAction+button(`${icon("rotate-ccw")} Ôn tập nhanh`,"review")+button(`${icon("play")} Học ngay`,"study","primary"))+
   `<div class="grid-dashboard">
     <div class="stack">
-      <section class="card section-card"><div class="section-title"><h2>${icon("activity")} Hoạt động học tập</h2></div><div class="stats-grid"><div class="stat"><strong class="text-indigo-400">${state.today}</strong><small>Câu hôm nay</small></div><div class="stat"><strong class="text-emerald-400">${state.minutes}m</strong><small>Thời gian</small></div></div><div class="mt-4"><div class="flex justify-between text-xs mb-2"><span>Mục tiêu ngày</span><span>${Math.min(100,Math.round(state.today/state.dailyGoal*100))}%</span></div>${progress(Math.min(100,state.today/state.dailyGoal*100))}</div><div class="mt-5 p-4 rounded-xl bg-amber-500/10"><strong>🔥 ${state.streak} ngày liên tục</strong><p class="muted text-xs mt-1">Học thêm hôm nay để giữ chuỗi.</p></div></section>
+      <section class="card section-card"><div class="section-title"><h2>${icon("activity")} Hoạt động học tập</h2></div><div class="stats-grid"><div class="stat"><strong class="text-indigo-400">${real.studied}</strong><small>Thẻ đã học</small></div><div class="stat"><strong class="text-emerald-400">${real.mastered}</strong><small>Đã thuộc</small></div></div><div class="mt-4"><div class="flex justify-between text-xs mb-2"><span>Tiến độ bộ thẻ tự tạo</span><span>${real.percent}%</span></div>${progress(real.percent)}</div><div class="mt-5 p-4 rounded-xl bg-amber-500/10"><strong>${icon("folder-check")} ${real.deckCount} bộ · ${real.totalCards} thẻ</strong><p class="muted text-xs mt-1">Lần học gần nhất: ${formatLastStudied(real.lastStudiedAt)} · Tổng lượt học: ${real.studyCount}</p></div></section>
       <section class="card section-card"><div class="section-title"><h2>${icon("star")} Cấp độ</h2><span class="pill">Lv.12</span></div><strong>Học giả Hán Việt</strong><p class="muted text-xs my-2">${state.xp.toLocaleString()} / 3.000 XP</p>${progress(state.xp/30)}</section>
     </div>
     <div class="stack">
@@ -2105,7 +2140,7 @@ function ensureLearnSummaryStyle(){
 }
 
 const pageRenderers={home:homePage,courses:coursesPage,decks:decksPage,inputData:inputDataPage,createDeck:createDeckPage,deckDetail:deckDetailPage,learnSession:learnSessionPage,quizExcel:quizExcelPage,practice:practicePage,exam:examPage,community:communityPage,stats:statsPage,calendar:calendarPage,leaderboard:leaderboardPage,settings:settingsPage};
-function render(){rememberNavigation();applyBackgroundStyle();ensureLearnSummaryStyle();document.body.classList.toggle("learn-mode",state.route==="learnSession");renderNav();renderUserUi();app.innerHTML=(pageRenderers[state.route]||homePage)();ensureFixedTopbar();applyCustomLogo();setTimeout(()=>{ensureFixedTopbar();applyCustomLogo()},0);window.scrollTo({top:0});}
+function render(){rememberNavigation();applyBackgroundStyle();ensureLearnSummaryStyle();rememberLastOpenedTabFromRoute();document.body.classList.toggle("learn-mode",state.route==="learnSession");renderNav();renderUserUi();app.innerHTML=(pageRenderers[state.route]||homePage)();ensureFixedTopbar();applyCustomLogo();setTimeout(()=>{ensureFixedTopbar();applyCustomLogo()},0);window.scrollTo({top:0});}
 
 document.addEventListener("click",e=>{
   const route=e.target.closest("[data-route]")?.dataset.route;if(route){
@@ -2130,7 +2165,8 @@ document.addEventListener("click",e=>{
     if(action==="pick-background"){pickBackgroundImage();return}
     if(action==="reset-background"){resetBackground();return}
     if(action==="clear-background"){state.background={...defaultBackground,mode:"none",customUrl:""};save();applyBackgroundStyle();closeQuickBackgroundPanel();render();showToast("Đã tắt hình nền");return}
-    if(["study","review","flashcard"].includes(action)){closeModal();state.activeCreatedDeck=null;state.flashIndex=0;state.route="practice";save();render();return}
+    if(action==="study"){closeModal();openLastStudyTab();return}
+    if(["review","flashcard"].includes(action)){closeModal();state.activeCreatedDeck=null;state.flashIndex=0;state.route="practice";save();render();return}
     if(action==="quiz"){closeModal();state.route="practice";save();render();setTimeout(()=>selectPractice("quiz"),0);return}
     if(action==="dictionary"){closeModal();state.route="practice";save();render();setTimeout(()=>selectPractice("dictionary"),0);return}
     if(action==="stats"){routeTo("stats");return}
@@ -2779,6 +2815,7 @@ if(!window.__hvqMobileBottomNavV11Resize){
     style.id='hvq-mobile-no-zoom-style';
     style.textContent=`
       html,body{max-width:100vw!important;overflow-x:hidden!important}
+      .page-header p:empty{display:none!important}
       *,*::before,*::after{box-sizing:border-box}
       @media(max-width:640px){
         html,body{
@@ -2813,7 +2850,7 @@ if(!window.__hvqMobileBottomNavV11Resize){
         }
         .learn-session{
           display:block!important;
-          padding:0 0 calc(88px + env(safe-area-inset-bottom,0px))!important;
+          padding:calc(env(safe-area-inset-top,0px) + 16px) 0 calc(88px + env(safe-area-inset-bottom,0px))!important;
           margin:0!important;
           overflow-x:hidden!important;
         }
@@ -2823,6 +2860,9 @@ if(!window.__hvqMobileBottomNavV11Resize){
           justify-content:space-between!important;
           gap:8px!important;
           padding:6px 0 12px!important;
+          position:sticky!important;
+          top:calc(env(safe-area-inset-top,0px) + 8px)!important;
+          z-index:40!important;
           margin:0!important;
         }
         .learn-question-card{
