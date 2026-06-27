@@ -1,3 +1,4 @@
+// HVQ_CLOUD_SYNC_V1_GOOGLE_APPS_SCRIPT - đồng bộ thư mục/bộ thẻ theo Gmail qua cloud
 // HVQ_MOBILE_BOTTOM_NAV_V12_ROOT_DECKS - bấm tab Đã tạo luôn về danh sách thư mục, không tự mở thư mục cũ
 const routes = {
   home:["Trang chủ","home"], courses:["Khoá học","book-open"], decks:["Bộ từ vựng","layers"],
@@ -83,6 +84,15 @@ if(state.inputData.savedSheet==="NhapLieu")state.inputData.mergeRows=false;
 // Dữ liệu cũ trước đây được tự động chuyển vào Gmail chính dưới đây, không còn hiện ở Khách/Gmail khác.
 const HVQ_OWNER_EMAIL="buivantoan1998@gmail.com";
 const HVQ_PERSONAL_SCOPE_VERSION="v7";
+
+// ===== HVQ CLOUD SYNC CONFIG =====
+// Để máy tính và điện thoại dùng chung thư mục/bộ thẻ theo Gmail:
+// 1) Tạo Google Apps Script bằng file hvq_cloud_sync_google_apps_script.gs đi kèm.
+// 2) Deploy dạng Web app: Execute as Me, Who has access: Anyone.
+// 3) Dán URL /exec vào đây, ví dụ: const HVQ_CLOUD_SYNC_URL="https://script.google.com/macros/s/AKfycb.../exec";
+// Khi để trống, app vẫn chạy bình thường nhưng dữ liệu chỉ lưu trên từng thiết bị.
+const HVQ_CLOUD_SYNC_URL="";
+const HVQ_CLOUD_SYNC_APP="hanvietquiz";
 const HVQ_PERSONAL_FIELDS=[
   "activeCreatedDeck","activeCreatedFolder","detailCardIndex","detailFlipped","detailMode","detailSearch","detailFilter","detailSort",
   "detailProgress","detailStars","deckStudyStats","learnOrder","learnIndex","learnOptions","learnAnswered","learnCorrect","learnUnknown",
@@ -153,6 +163,156 @@ function hvqSaveCurrentAccountPersonalData(){
   const accountKey=hvqCurrentAccountKey();
   try{localStorage.setItem(hvqPersonalStateKey(accountKey),JSON.stringify(hvqCollectPersonalStateFrom(state)))}catch{}
   persistCreatedDecks();
+}
+
+
+// ===== HVQ CLOUD SYNC v1 =====
+// Đồng bộ dữ liệu cá nhân theo Gmail qua Google Apps Script.
+// GitHub Pages là web tĩnh nên không tự có database; phần này dùng Web App URL ở HVQ_CLOUD_SYNC_URL làm backend.
+let hvqCloudReady=false;
+let hvqCloudApplyingRemote=false;
+let hvqCloudPushTimer=null;
+let hvqCloudLastPayloadHash="";
+let hvqCloudLastStatus="local";
+function hvqCloudEnabled(){return !!String(HVQ_CLOUD_SYNC_URL||"").trim()}
+function hvqCloudLocalStampKey(accountKey=hvqCurrentAccountKey()){return `hvq-cloud-updated-at::${accountKey}`}
+function hvqCloudLastSyncKey(accountKey=hvqCurrentAccountKey()){return `hvq-cloud-last-sync-at::${accountKey}`}
+function hvqCloudNow(){return new Date().toISOString()}
+function hvqCloudGetLocalStamp(accountKey=hvqCurrentAccountKey()){return localStorage.getItem(hvqCloudLocalStampKey(accountKey))||""}
+function hvqCloudSetLocalStamp(stamp=hvqCloudNow(),accountKey=hvqCurrentAccountKey()){try{localStorage.setItem(hvqCloudLocalStampKey(accountKey),stamp)}catch{}return stamp}
+function hvqCloudMarkLocalChange(){if(hvqCloudApplyingRemote)return;hvqCloudSetLocalStamp()}
+function hvqCloudDeckStamp(){return (state.createdDecks||[]).map(d=>d?.updatedAt||d?.createdAt||"").sort().pop()||""}
+function hvqCloudHasLocalData(){
+  const deckCount=(state.createdDecks||[]).length;
+  const draftHasData=!!(state.deckDraft?.title||state.deckDraft?.cards?.some?.(c=>c.term||c.definition||c.example||c.synonyms));
+  const excelHasData=!!(state.excelQuiz?.sourceUrl||state.excelQuiz?.pasteData||state.inputData?.sheetUrl);
+  return deckCount>0||draftHasData||excelHasData;
+}
+function hvqCloudLocalUpdatedAt(){return [hvqCloudGetLocalStamp(),hvqCloudDeckStamp()].filter(Boolean).sort().pop()||""}
+function hvqCloudBuildSnapshot(){
+  const updatedAt=hvqCloudLocalUpdatedAt()||hvqCloudSetLocalStamp();
+  return {
+    app:HVQ_CLOUD_SYNC_APP,
+    version:"1",
+    email:hvqNormalizedEmail(state.user?.email||""),
+    ownerEmail:HVQ_OWNER_EMAIL,
+    updatedAt,
+    user:{name:state.user?.name||"",email:state.user?.email||"",picture:state.user?.picture||"",sub:state.user?.sub||""},
+    personal:hvqCollectPersonalStateFrom(state),
+    createdDecks:Array.isArray(state.createdDecks)?state.createdDecks:[]
+  };
+}
+function hvqCloudSimpleHash(text=""){
+  let h=0;for(let i=0;i<text.length;i++)h=((h<<5)-h+text.charCodeAt(i))|0;
+  return `${text.length}:${h}`;
+}
+function hvqCloudJsonp(params={},timeoutMs=9000){
+  return new Promise((resolve,reject)=>{
+    const callbackName=`hvqCloudCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const script=document.createElement("script");
+    const done=(ok,value)=>{clearTimeout(timer);try{delete window[callbackName]}catch{}script.remove();ok?resolve(value):reject(value)};
+    const timer=setTimeout(()=>done(false,new Error("cloud_timeout")),timeoutMs);
+    window[callbackName]=data=>done(true,data);
+    const url=new URL(HVQ_CLOUD_SYNC_URL);
+    Object.entries({...params,callback:callbackName,_:Date.now()}).forEach(([k,v])=>url.searchParams.set(k,String(v??"")));
+    script.onerror=()=>done(false,new Error("cloud_script_error"));
+    script.src=url.toString();
+    document.head.appendChild(script);
+  });
+}
+function hvqCloudNormalizeSnapshot(data={}){
+  if(!data||typeof data!=="object")return null;
+  const snap=data.data&&typeof data.data==="object"?data.data:data;
+  if(!snap||typeof snap!=="object")return null;
+  return {
+    updatedAt:String(snap.updatedAt||snap.savedAt||""),
+    personal:hvqNormalizePersonalState(snap.personal||snap.state||{}),
+    createdDecks:Array.isArray(snap.createdDecks)?snap.createdDecks:[],
+    user:snap.user||{}
+  };
+}
+async function hvqCloudApplySnapshot(snapshot,reason="load"){
+  if(!snapshot)return false;
+  hvqCloudApplyingRemote=true;
+  try{
+    hvqApplyPersonalState(snapshot.personal||{});
+    state.createdDecks=Array.isArray(snapshot.createdDecks)?snapshot.createdDecks:[];
+    await idbSet(hvqPersonalDecksKey(),state.createdDecks||[]);
+    try{localStorage.setItem(hvqPersonalStateKey(),JSON.stringify(hvqCollectPersonalStateFrom(state)))}catch{}
+    hvqCloudSetLocalStamp(snapshot.updatedAt||hvqCloudNow());
+    try{localStorage.setItem(hvqCloudLastSyncKey(),hvqCloudNow())}catch{}
+    hvqCloudLastStatus="synced";
+    return true;
+  }finally{hvqCloudApplyingRemote=false}
+}
+async function hvqCloudPullAndApply(reason="auto"){
+  if(!hvqCloudEnabled()||!state.user?.signedIn||!state.user?.email)return false;
+  const accountKey=hvqCurrentAccountKey();
+  const localStamp=hvqCloudLocalUpdatedAt();
+  const localHasData=hvqCloudHasLocalData();
+  try{
+    const response=await hvqCloudJsonp({action:"load",app:HVQ_CLOUD_SYNC_APP,email:state.user.email,ownerEmail:HVQ_OWNER_EMAIL});
+    const snapshot=hvqCloudNormalizeSnapshot(response);
+    if(snapshot&&snapshot.updatedAt){
+      const cloudIsNewer=!localStamp||snapshot.updatedAt>localStamp;
+      const localIsEmpty=!localHasData;
+      if(cloudIsNewer||localIsEmpty){
+        await hvqCloudApplySnapshot(snapshot,reason);
+        if(reason!=="init")showToast("Đã tải dữ liệu từ cloud","cloud");
+        return true;
+      }
+      if(localStamp>snapshot.updatedAt&&localHasData){
+        hvqCloudSchedulePush("local-newer");
+      }
+      return false;
+    }
+    if(localHasData)hvqCloudSchedulePush("first-upload");
+    return false;
+  }catch(err){
+    hvqCloudLastStatus="offline";
+    console.warn("HVQ cloud sync load failed",err);
+    if(reason!=="init")showToast("Chưa tải được dữ liệu cloud, app vẫn dùng dữ liệu máy này","wifi-off");
+    return false;
+  }
+}
+function hvqCloudSchedulePush(reason="auto"){
+  if(!hvqCloudReady||hvqCloudApplyingRemote||!hvqCloudEnabled()||!state.user?.signedIn||!state.user?.email)return;
+  clearTimeout(hvqCloudPushTimer);
+  hvqCloudPushTimer=setTimeout(()=>hvqCloudPushNow(reason),1400);
+}
+async function hvqCloudPushNow(reason="manual"){
+  if(!hvqCloudEnabled()||!state.user?.signedIn||!state.user?.email)return false;
+  const snapshot=hvqCloudBuildSnapshot();
+  const payload=JSON.stringify(snapshot);
+  const hash=hvqCloudSimpleHash(payload);
+  if(hash===hvqCloudLastPayloadHash&&reason!=="manual")return true;
+  hvqCloudLastPayloadHash=hash;
+  const form=new FormData();
+  form.append("action","save");
+  form.append("app",HVQ_CLOUD_SYNC_APP);
+  form.append("email",snapshot.email);
+  form.append("ownerEmail",HVQ_OWNER_EMAIL);
+  form.append("updatedAt",snapshot.updatedAt);
+  form.append("payload",payload);
+  try{
+    await fetch(HVQ_CLOUD_SYNC_URL,{method:"POST",mode:"no-cors",body:form});
+    try{localStorage.setItem(hvqCloudLastSyncKey(),hvqCloudNow())}catch{}
+    hvqCloudLastStatus="synced";
+    if(reason==="manual")showToast("Đã gửi dữ liệu lên cloud","cloud");
+    return true;
+  }catch(err){
+    hvqCloudLastStatus="offline";
+    console.warn("HVQ cloud sync save failed",err);
+    if(reason==="manual")showToast("Chưa gửi được dữ liệu lên cloud","wifi-off");
+    return false;
+  }
+}
+async function hvqCloudManualSync(){
+  if(!state.user?.signedIn){showToast("Hãy đăng nhập Gmail trước","log-in");return}
+  if(!hvqCloudEnabled()){showToast("Chưa cấu hình HVQ_CLOUD_SYNC_URL trong app.js","circle-alert");return}
+  await hvqCloudPullAndApply("manual");
+  await hvqCloudPushNow("manual");
+  render();
 }
 const app=document.querySelector("#app");
 
@@ -263,7 +423,7 @@ async function idbDelete(key){const db=await deckDb();if(!db)return;return new P
 function lightState(){return hvqLightStateWithoutPersonal()}
 function persistCreatedDecks(){idbSet(hvqPersonalDecksKey(),state.createdDecks||[]).catch(()=>showToast("Không lưu được bộ thẻ lớn","circle-alert"))}
 async function loadCreatedDecks(){await hvqLoadCurrentAccountPersonalData()}
-function save(){try{localStorage.setItem("hvq-state",JSON.stringify(lightState()));hvqSaveCurrentAccountPersonalData()}catch{showToast("Bộ thẻ lớn đã được lưu ngoài localStorage","database")}}
+function save(){try{localStorage.setItem("hvq-state",JSON.stringify(lightState()));hvqSaveCurrentAccountPersonalData();hvqCloudMarkLocalChange();hvqCloudSchedulePush("save")}catch{showToast("Bộ thẻ lớn đã được lưu ngoài localStorage","database")}}
 function escapeHtml(value=""){return String(value).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]))}
 function escapeAttr(value=""){return escapeHtml(value)}
 function escapeRegExp(value=""){return String(value).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}
@@ -324,10 +484,10 @@ function initials(name="Khách"){return name.trim().split(/\s+/).map(x=>x[0]).jo
 function userAvatar(user=currentUser()){return user.picture?`<img class="avatar avatar-image" src="${escapeAttr(user.picture)}" alt="${escapeAttr(user.name)}">`:`<span class="avatar">${initials(user.name)}</span>`}
 function isGoogleConfigured(){return googleClientId&&googleClientId.includes(".apps.googleusercontent.com")&&!googleClientId.startsWith("PASTE_")}
 function parseJwt(token){try{let payload=token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/");payload+=Array((4-payload.length%4)%4+1).join("=");return JSON.parse(decodeURIComponent(atob(payload).split("").map(c=>`%${("00"+c.charCodeAt(0).toString(16)).slice(-2)}`).join("")))}catch{return null}}
-async function handleGoogleCredential(response){const profile=parseJwt(response.credential);if(!profile){showToast("Không đọc được phản hồi từ Google","circle-alert");return}state.user={name:profile.name||profile.given_name||"Người dùng Google",email:profile.email||"",picture:profile.picture||"",sub:profile.sub||"",signedIn:true};await hvqLoadCurrentAccountPersonalData();save();closeModal();render();showToast(`Xin chào ${state.user.name}`)}
+async function handleGoogleCredential(response){const profile=parseJwt(response.credential);if(!profile){showToast("Không đọc được phản hồi từ Google","circle-alert");return}state.user={name:profile.name||profile.given_name||"Người dùng Google",email:profile.email||"",picture:profile.picture||"",sub:profile.sub||"",signedIn:true};await hvqLoadCurrentAccountPersonalData();await hvqCloudPullAndApply("login");hvqCloudReady=true;save();closeModal();render();showToast(`Xin chào ${state.user.name}`)}
 function openLoginModal(){modal("Đăng nhập",`<div class="login-panel"><div class="login-icon">${icon("user-round-check")}</div><h3>Đăng nhập HanVietQuiz</h3><p class="muted text-sm">Dùng tài khoản Google để hiển thị hồ sơ và lưu phiên học trên trình duyệt này.</p><div id="googleSignInButton" class="google-signin-slot"></div>${isGoogleConfigured()?"":`<p class="auth-note">${icon("circle-alert")} Chưa có Google Client ID. Hãy thay giá trị meta <strong>google-signin-client_id</strong> trong index.html.</p>`}</div>`);renderGoogleButton()}
-async function signOut(){if(window.google?.accounts?.id)google.accounts.id.disableAutoSelect();state.user={...defaultUser};await hvqLoadCurrentAccountPersonalData();save();render();showToast("Đã đăng xuất")}
-function renderUserUi(){const user=currentUser();const buttonEl=document.querySelector("#profileButton");buttonEl.innerHTML=`${userAvatar(user)}<span class="hidden sm:inline">${escapeHtml(user.name)}</span>`;document.querySelector("#profileMenu").innerHTML=user.signedIn?`<div class="profile-summary">${userAvatar(user)}<div><strong>${escapeHtml(user.name)}</strong><small>${escapeHtml(user.email||"Đã đăng nhập Google")}</small></div></div><button class="dropdown-item" data-route="settings">Hồ sơ & cài đặt</button><button class="dropdown-item" data-action="upgrade">Nâng cấp Pro</button><button class="dropdown-item text-red-400" data-action="sign-out">Đăng xuất</button>`:`<div class="profile-summary"><span class="avatar">HV</span><div><strong>Khách</strong><small>Đăng nhập để cá nhân hóa hồ sơ</small></div></div><button class="dropdown-item" data-action="sign-in-google">${icon("log-in")} Đăng nhập Google</button><button class="dropdown-item" data-route="settings">Cài đặt</button>`}
+async function signOut(){if(state.user?.signedIn)await hvqCloudPushNow("signout");if(window.google?.accounts?.id)google.accounts.id.disableAutoSelect();state.user={...defaultUser};await hvqLoadCurrentAccountPersonalData();save();render();showToast("Đã đăng xuất")}
+function renderUserUi(){const user=currentUser();const buttonEl=document.querySelector("#profileButton");buttonEl.innerHTML=`${userAvatar(user)}<span class="hidden sm:inline">${escapeHtml(user.name)}</span>`;document.querySelector("#profileMenu").innerHTML=user.signedIn?`<div class="profile-summary">${userAvatar(user)}<div><strong>${escapeHtml(user.name)}</strong><small>${escapeHtml(user.email||"Đã đăng nhập Google")}</small></div></div><button class="dropdown-item" data-route="settings">Hồ sơ & cài đặt</button><button class="dropdown-item" data-action="sync-cloud-now">${icon("cloud")} Đồng bộ ngay</button><button class="dropdown-item" data-action="upgrade">Nâng cấp Pro</button><button class="dropdown-item text-red-400" data-action="sign-out">Đăng xuất</button>`:`<div class="profile-summary"><span class="avatar">HV</span><div><strong>Khách</strong><small>Đăng nhập để cá nhân hóa hồ sơ</small></div></div><button class="dropdown-item" data-action="sign-in-google">${icon("log-in")} Đăng nhập Google</button><button class="dropdown-item" data-route="settings">Cài đặt</button>`}
 function ensureFixedTopbarStyle(){
   if(document.querySelector("#hvqFixedTopbarStyle"))return;
   const style=document.createElement("style");
@@ -1903,7 +2063,9 @@ function calendarPage(){const days=Array.from({length:30},(_,i)=>i+1);return hea
 function leaderboardPage(){const me=currentUser(),myName=me.signedIn?me.name:"Bạn";const users=[["Trung Kiên",4820],["Thu Hà",2190],[myName,state.xp,true],["Quốc Bảo",1950],["Lan Phương",1820]];return header("Bảng xếp hạng","Thi đua tích cực cùng cộng đồng mỗi tuần.")+`<div class="card section-card max-w-3xl">${users.sort((a,b)=>b[1]-a[1]).map((u,i)=>`<div class="list-row ${u[2]?"bg-indigo-500/10 rounded-xl":""}"><strong class="w-8 text-center">${i<3?["🥇","🥈","🥉"][i]:i+1}</strong>${u[2]?userAvatar(me):`<span class="avatar">${initials(u[0])}</span>`}<div class="row-main"><strong>${escapeHtml(u[0])} ${u[2]?"(bạn)":""}</strong></div><strong>${u[1].toLocaleString()} XP</strong></div>`).join("")}</div>`}
 function settingsPage(){
   const user=currentUser(),bg={...defaultBackground,...(state.background||{})},preview=backgroundPreviewUrl();
-  return header("Cài đặt","Tùy chỉnh trải nghiệm học tập của bạn.",user.signedIn?button(`${icon("log-out")} Đăng xuất`,"sign-out"):button(`${icon("log-in")} Đăng nhập Google`,"sign-in-google","primary"))+
+  const syncInfo=hvqCloudEnabled()?`Cloud sync: ${hvqCloudLastStatus==="synced"?"đã bật":"đang chờ"}`:"Cloud sync: chưa cấu hình";
+  const settingsActions=user.signedIn?button(`${icon("cloud")} Đồng bộ ngay`,"sync-cloud-now","primary")+button(`${icon("log-out")} Đăng xuất`,"sign-out"):button(`${icon("log-in")} Đăng nhập Google`,"sign-in-google","primary");
+  return header("Cài đặt",`Tùy chỉnh trải nghiệm học tập của bạn. ${syncInfo}`,settingsActions)+
   `<form id="settingsForm" class="card section-card max-w-3xl"><div class="profile-settings-head">${userAvatar(user)}<div><strong>${escapeHtml(user.name)}</strong><small>${escapeHtml(user.email||"Chưa đăng nhập Google")}</small></div></div><div class="form-grid"><div class="field"><label>Tên hiển thị</label><input name="name" class="input" value="${escapeAttr(user.name)}" ${user.signedIn?"readonly":""}></div><div class="field"><label>Mục tiêu mỗi ngày</label><input name="dailyGoal" type="number" min="5" max="500" class="input" value="${state.dailyGoal}"></div><div class="field"><label>Giao diện</label><select name="theme" class="input"><option value="dark" ${state.theme==="dark"?"selected":""}>Tối</option><option value="midnight" ${state.theme==="midnight"?"selected":""}>Midnight</option></select></div><div class="field"><label>Thông báo học tập</label><select name="notifications" class="input"><option value="true">Bật</option><option value="false" ${!state.notifications?"selected":""}>Tắt</option></select></div><div class="field full"><label>Giới thiệu</label><textarea class="input" rows="4">Đang chinh phục TOPIK II và từ Hán Việt.</textarea></div></div><div class="flex gap-2 mt-5"><button class="button primary" type="submit">Lưu cài đặt</button><button class="button danger" type="button" data-action="reset-data">Đặt lại dữ liệu</button></div></form>
   <section class="card section-card max-w-3xl mt-5">
     <div class="section-title"><h2>${icon("image")} Hình nền trang web</h2><span class="pill">OpenQuiz style</span></div>
@@ -1964,7 +2126,7 @@ document.addEventListener("click",e=>{
     if(action==="quick-background"){openQuickBackgroundPanel();return}
     if(action==="close-quick-background"){closeQuickBackgroundPanel();return}
     if(action==="sign-in-google"){openLoginModal();return}
-    if(action==="sign-out"){signOut();return}
+    if(action==="sign-out"){signOut();return}if(action==="sync-cloud-now"){hvqCloudManualSync();return}
     if(action==="pick-background"){pickBackgroundImage();return}
     if(action==="reset-background"){resetBackground();return}
     if(action==="clear-background"){state.background={...defaultBackground,mode:"none",customUrl:""};save();applyBackgroundStyle();closeQuickBackgroundPanel();render();showToast("Đã tắt hình nền");return}
@@ -2542,7 +2704,7 @@ document.querySelector("#profileMenu").innerHTML=`<button class="dropdown-item" 
 document.querySelector("#searchButton").onclick=()=>modal("Tìm kiếm nhanh",`<input id="globalSearch" class="input" autofocus placeholder="Tìm khóa học, bộ từ, từ vựng..."><div class="search-results">${decks.slice(0,3).map(d=>`<button class="dropdown-item" data-deck="${d.id}">${d.icon} ${d.name}</button>`).join("")}</div>`);
 document.addEventListener("click",e=>{if(!e.target.closest("#notificationButton")&&!e.target.closest("#notificationMenu"))document.querySelector("#notificationMenu")?.classList.remove("show");if(!e.target.closest("#profileButton")&&!e.target.closest("#profileMenu"))document.querySelector("#profileMenu")?.classList.remove("show");if(!e.target.closest("#hvqQuickBackgroundButton")&&!e.target.closest("#hvqQuickBackgroundPanel"))closeQuickBackgroundPanel()});
 
-async function initApp(){await hvqMigrateLegacyPersonalDataToOwner();await hvqLoadCurrentAccountPersonalData();save();render();setTimeout(applyCustomLogo,0)}
+async function initApp(){await hvqMigrateLegacyPersonalDataToOwner();await hvqLoadCurrentAccountPersonalData();await hvqCloudPullAndApply("init");hvqCloudReady=true;save();render();setTimeout(applyCustomLogo,0)}
 initApp();
 
 (function injectAiShortExplainStyle(){
