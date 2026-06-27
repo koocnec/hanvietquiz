@@ -384,15 +384,33 @@ function ensureTopBackgroundButton(topbar=null){
     btn.dataset.action="quick-background";
     btn.innerHTML=`${icon("image")}<span>Đổi hình nền</span>`;
   }
-  const search=document.querySelector("#searchButton");
-  const profile=document.querySelector("#profileButton");
-  const host=search?.parentElement||profile?.parentElement||topbar||document.querySelector("#topNav")?.parentElement;
-  if(host&&!host.contains(btn)){
-    if(search&&host.contains(search))host.insertBefore(btn,search);
-    else if(profile&&host.contains(profile))host.insertBefore(btn,profile);
-    else host.appendChild(btn);
+
+  topbar = topbar || document.querySelector(".hvq-fixed-topbar") || findTopbarElement();
+  let rightHost=document.querySelector("#hvqTopbarRightActions");
+  if(!rightHost){
+    rightHost=document.createElement("div");
+    rightHost.id="hvqTopbarRightActions";
+    rightHost.className="hvq-topbar-right-actions";
   }
+
+  const search=document.querySelector("#searchButton");
+  const notification=document.querySelector("#notificationButton");
+  const profile=document.querySelector("#profileButton");
+
+  if(topbar && !topbar.contains(rightHost)) topbar.appendChild(rightHost);
+  if(!rightHost.contains(btn)) rightHost.appendChild(btn);
+
+  // Đưa các nút cũ vào khu vực bên phải nếu tồn tại, tránh bị biến mất khi fixed topbar.
+  [search,notification,profile].forEach(el=>{
+    if(el && !rightHost.contains(el)) rightHost.appendChild(el);
+    if(el){
+      el.style.removeProperty("display");
+      el.style.setProperty("visibility","visible","important");
+      el.style.setProperty("opacity","1","important");
+    }
+  });
 }
+
 function closeQuickBackgroundPanel(){document.querySelector("#hvqQuickBackgroundPanel")?.remove()}
 function openQuickBackgroundPanel(){
   const old=document.querySelector("#hvqQuickBackgroundPanel");
@@ -430,9 +448,10 @@ function applyCustomLogo(){
   ensureBrandLogoStyle();
   const logoUrl='assets/hq-logo-nw.png';
   const topNav=document.querySelector('#topNav');
-  const topbar=findTopbarElement();
+  const topbar=document.querySelector('.hvq-fixed-topbar')||findTopbarElement();
   const host=(topNav?.parentElement)||topbar;
   let brand=document.querySelector('#hvqBrandLogoLink');
+
   if(!brand && host){
     brand=document.createElement('a');
     brand.id='hvqBrandLogoLink';
@@ -448,45 +467,21 @@ function applyCustomLogo(){
     if(!img.parentElement)brand.appendChild(img);
   }
 
-  // Xóa/ẩn logo cũ nằm giữa logo mới và menu điều hướng.
-  // Lỗi trước đó: code chỉ thêm logo HQ mới, nhưng logo màu cũ trong header vẫn còn.
+  // Chỉ ẩn logo cũ màu xanh/tím nếu nó nằm NGAY trước #topNav.
+  // Không ẩn các cụm nút bên phải như Đổi hình nền / tìm kiếm / thông báo / đăng nhập.
   if(host && topNav && host.contains(topNav)){
     [...host.children].forEach(child=>{
-      if(child===brand || child===topNav) return;
-      const beforeTopNav = child.compareDocumentPosition(topNav) & Node.DOCUMENT_POSITION_FOLLOWING;
-      const looksLikeOldLogo =
-        beforeTopNav &&
-        (
-          child.matches?.('img,svg,a,div,span') ||
-          child.querySelector?.('img,svg')
-        ) &&
-        !child.matches?.('.nav-button,.sidebar-button,button,[data-route]');
+      if(child===brand || child===topNav || child.id==='hvqQuickBackgroundButton' || child.id==='profileButton' || child.id==='searchButton' || child.id==='notificationButton')return;
+      const beforeTopNav = !!(child.compareDocumentPosition(topNav) & Node.DOCUMENT_POSITION_FOLLOWING);
+      const containsLogoImg = !!child.querySelector?.('img,svg') || child.matches?.('img,svg');
+      const hasInteractive = !!child.querySelector?.('button,[data-action],[data-route],input,select,a:not([href="#"])');
+      const looksLikeOldLogo = beforeTopNav && containsLogoImg && !hasInteractive;
       if(looksLikeOldLogo){
         child.classList.add('hvq-old-logo-hidden');
         child.style.setProperty('display','none','important');
       }
     });
   }
-
-  document.querySelectorAll('header img, .sidebar img, .brand img, .logo img, img').forEach(img=>{
-    if(img.closest('#hvqBrandLogoLink'))return;
-    const alt=(img.alt||'').toLowerCase();
-    const src=(img.getAttribute('src')||'').toLowerCase();
-    const w=img.clientWidth||img.width||img.naturalWidth||0;
-    const h=img.clientHeight||img.height||img.naturalHeight||0;
-    const inTopbar=!!img.closest('.hvq-fixed-topbar');
-    const maybeLogo=(alt.includes('logo')||src.includes('logo')||inTopbar||img.closest('.sidebar'));
-    if(maybeLogo && w<=130 && h<=90){
-      if(inTopbar){
-        img.closest('a,div,span')?.classList.add('hvq-old-logo-hidden');
-        (img.closest('a,div,span')||img).style.setProperty('display','none','important');
-      }else{
-        img.src=logoUrl;
-        img.alt='HanVietQuiz logo';
-        img.classList.add('hvq-brand-replaced');
-      }
-    }
-  });
 
   let favicon=document.querySelector('link[rel="icon"]')||document.querySelector('link[rel="shortcut icon"]');
   if(!favicon){
@@ -496,6 +491,7 @@ function applyCustomLogo(){
   }
   favicon.href=logoUrl;
 }
+
 function renderGoogleButton(){if(!isGoogleConfigured())return;const target=document.querySelector("#googleSignInButton");if(!target||!window.google?.accounts?.id)return;target.innerHTML="";google.accounts.id.initialize({client_id:googleClientId,callback:handleGoogleCredential,auto_select:false});google.accounts.id.renderButton(target,{theme:"filled_black",size:"large",type:"standard",shape:"pill",text:"signin_with",logo_alignment:"left",locale:"vi",width:260})}
 window.initGoogleAuth=()=>renderGoogleButton();
 
