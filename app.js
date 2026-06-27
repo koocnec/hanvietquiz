@@ -300,21 +300,6 @@ function ensureFixedTopbarStyle(){
     }
     #hvqQuickBackgroundButton:hover,
     .hvq-top-bg-button:hover{background:rgba(148,163,184,.14)}
-    
-    .hvq-fixed-topbar .page-header,
-    .hvq-fixed-topbar h1,
-    .hvq-fixed-topbar .page-header h1{position:static!important}
-    body.hvq-topbar-fixed #app,
-    body.hvq-topbar-fixed .app,
-    body.hvq-topbar-fixed main,
-    body.hvq-topbar-fixed .main-content,
-    body.hvq-topbar-fixed .workspace,
-    body.hvq-topbar-fixed .page{padding-top:0!important;margin-top:0!important}
-    body.hvq-topbar-fixed .sidebar,
-    body.hvq-topbar-fixed aside,
-    body.hvq-topbar-fixed #mainSidebar,
-    body.hvq-topbar-fixed #toolSidebar{padding-top:12px}
-
     #hvqQuickBackgroundButton .iconify{font-size:18px}
     #hvqQuickBackgroundPanel{
       position:fixed;
@@ -346,60 +331,35 @@ function findTopbarElement(){
   const topNav=document.querySelector("#topNav");
   const profile=document.querySelector("#profileButton");
   const search=document.querySelector("#searchButton");
-  const notification=document.querySelector("#notificationButton");
-
-  // Chỉ chọn thanh bar thật sự có #topNav / profile / search.
-  // Không được lấy header chung của trang, vì nó có thể là tiêu đề "Đã tạo".
-  const anchors=[topNav,profile,search,notification].filter(Boolean);
-  for(const anchor of anchors){
-    const candidates=[
-      anchor.closest(".topbar"),
-      anchor.closest(".app-header"),
-      anchor.closest(".header-bar"),
-      anchor.closest("header"),
-      anchor.parentElement?.parentElement,
-      anchor.parentElement
-    ].filter(Boolean);
-
-    for(const el of candidates){
-      if(!el || el===document.body || el===document.documentElement)continue;
-      const hasNav=!!el.querySelector?.("#topNav");
-      const hasRight=!!el.querySelector?.("#profileButton,#searchButton,#notificationButton");
-      const looksLikePageHeader=!!el.querySelector?.(".page-header") || /^Đã tạo|Trang chủ|Khóa học|Quiz/i.test((el.textContent||"").trim());
-      if((hasNav||hasRight) && !looksLikePageHeader)return el;
-    }
-  }
-  return null;
+  const candidates=[
+    topNav?.closest("header"),
+    profile?.closest("header"),
+    search?.closest("header"),
+    document.querySelector("header"),
+    topNav?.parentElement?.parentElement,
+    topNav?.parentElement,
+    profile?.parentElement?.parentElement,
+    profile?.parentElement
+  ].filter(Boolean);
+  return candidates.find(el=>el&&el !== document.body&&el !== document.documentElement) || null;
 }
-
 function ensureFixedTopbar(){
   ensureFixedTopbarStyle();
-  const topbar=document.querySelector(".hvq-fixed-topbar")||findTopbarElement();
-
-  if(!topbar){
-    document.body.classList.remove("hvq-topbar-fixed");
-    ensureTopBackgroundButton(null);
-    return;
-  }
-
   document.body.classList.add("hvq-topbar-fixed");
-
-  // Không di chuyển page header nữa. Chỉ fixed đúng thanh bar có menu điều hướng.
-  topbar.classList.add("hvq-fixed-topbar");
-  topbar.style.setProperty("display","flex","important");
-  topbar.style.setProperty("align-items","center","important");
-  topbar.style.setProperty("visibility","visible","important");
-  topbar.style.setProperty("opacity","1","important");
-  topbar.style.setProperty("position","fixed","important");
-  topbar.style.setProperty("top","0","important");
-  topbar.style.setProperty("left","0","important");
-  topbar.style.setProperty("right","0","important");
-  topbar.style.setProperty("width","100%","important");
-  topbar.style.setProperty("z-index","2147483000","important");
-
+  const topbar=findTopbarElement();
+  if(topbar){
+    topbar.classList.add("hvq-fixed-topbar");
+    topbar.style.setProperty("display","flex","important");
+    topbar.style.setProperty("visibility","visible","important");
+    topbar.style.setProperty("opacity","1","important");
+    topbar.style.setProperty("position","fixed","important");
+    topbar.style.setProperty("top","0","important");
+    topbar.style.setProperty("left","0","important");
+    topbar.style.setProperty("right","0","important");
+    topbar.style.setProperty("z-index","2147483000","important");
+  }
   ensureTopBackgroundButton(topbar);
 }
-
 function ensureTopBackgroundButton(topbar=null){
   let btn=document.querySelector("#hvqQuickBackgroundButton");
   if(!btn){
@@ -410,33 +370,15 @@ function ensureTopBackgroundButton(topbar=null){
     btn.dataset.action="quick-background";
     btn.innerHTML=`${icon("image")}<span>Đổi hình nền</span>`;
   }
-
-  topbar = topbar || document.querySelector(".hvq-fixed-topbar") || findTopbarElement();
-  let rightHost=document.querySelector("#hvqTopbarRightActions");
-  if(!rightHost){
-    rightHost=document.createElement("div");
-    rightHost.id="hvqTopbarRightActions";
-    rightHost.className="hvq-topbar-right-actions";
-  }
-
   const search=document.querySelector("#searchButton");
-  const notification=document.querySelector("#notificationButton");
   const profile=document.querySelector("#profileButton");
-
-  if(topbar && !topbar.contains(rightHost)) topbar.appendChild(rightHost);
-  if(!rightHost.contains(btn)) rightHost.appendChild(btn);
-
-  // Đưa các nút cũ vào khu vực bên phải nếu tồn tại, tránh bị biến mất khi fixed topbar.
-  [search,notification,profile].forEach(el=>{
-    if(el && !rightHost.contains(el)) rightHost.appendChild(el);
-    if(el){
-      el.style.removeProperty("display");
-      el.style.setProperty("visibility","visible","important");
-      el.style.setProperty("opacity","1","important");
-    }
-  });
+  const host=search?.parentElement||profile?.parentElement||topbar||document.querySelector("#topNav")?.parentElement;
+  if(host&&!host.contains(btn)){
+    if(search&&host.contains(search))host.insertBefore(btn,search);
+    else if(profile&&host.contains(profile))host.insertBefore(btn,profile);
+    else host.appendChild(btn);
+  }
 }
-
 function closeQuickBackgroundPanel(){document.querySelector("#hvqQuickBackgroundPanel")?.remove()}
 function openQuickBackgroundPanel(){
   const old=document.querySelector("#hvqQuickBackgroundPanel");
@@ -458,66 +400,6 @@ function openQuickBackgroundPanel(){
   document.body.appendChild(panel);
 }
 function openQuickBackgroundModal(){openQuickBackgroundPanel()}
-function ensureBrandLogoStyle(){
-  if(document.querySelector("#hvqBrandLogoStyle"))return;
-  const style=document.createElement("style");
-  style.id="hvqBrandLogoStyle";
-  style.textContent=`
-    #hvqBrandLogoLink{display:inline-flex!important;align-items:center;justify-content:center;flex:0 0 auto;width:44px;height:44px;margin-right:12px;border-radius:14px;text-decoration:none}
-    #hvqBrandLogoLink img{display:block;width:52px;height:52px;object-fit:contain;border-radius:12px}
-    .hvq-old-logo-hidden{display:none!important}
-    .hvq-brand-replaced{object-fit:contain!important;border-radius:12px}
-  `;
-  document.head.appendChild(style);
-}
-function applyCustomLogo(){
-  ensureBrandLogoStyle();
-  const logoUrl='assets/hq-logo-nw.png';
-  const topNav=document.querySelector('#topNav');
-  const topbar=document.querySelector('.hvq-fixed-topbar')||findTopbarElement();
-  const host=(topNav?.parentElement)||topbar;
-  let brand=document.querySelector('#hvqBrandLogoLink');
-
-  if(!brand && host){
-    brand=document.createElement('a');
-    brand.id='hvqBrandLogoLink';
-    brand.href='#';
-    brand.dataset.route='home';
-    brand.setAttribute('aria-label','HanVietQuiz');
-    brand.innerHTML=`<img src="${logoUrl}" alt="HanVietQuiz logo">`;
-    host.insertBefore(brand, host.firstChild);
-  }else if(brand){
-    const img=brand.querySelector('img')||document.createElement('img');
-    img.src=logoUrl;
-    img.alt='HanVietQuiz logo';
-    if(!img.parentElement)brand.appendChild(img);
-  }
-
-  // Chỉ ẩn logo cũ màu xanh/tím nếu nó nằm NGAY trước #topNav.
-  // Không ẩn các cụm nút bên phải như Đổi hình nền / tìm kiếm / thông báo / đăng nhập.
-  if(host && topNav && host.contains(topNav)){
-    [...host.children].forEach(child=>{
-      if(child===brand || child===topNav || child.id==='hvqQuickBackgroundButton' || child.id==='profileButton' || child.id==='searchButton' || child.id==='notificationButton')return;
-      const beforeTopNav = !!(child.compareDocumentPosition(topNav) & Node.DOCUMENT_POSITION_FOLLOWING);
-      const containsLogoImg = !!child.querySelector?.('img,svg') || child.matches?.('img,svg');
-      const hasInteractive = !!child.querySelector?.('button,[data-action],[data-route],input,select,a:not([href="#"])');
-      const looksLikeOldLogo = beforeTopNav && containsLogoImg && !hasInteractive;
-      if(looksLikeOldLogo){
-        child.classList.add('hvq-old-logo-hidden');
-        child.style.setProperty('display','none','important');
-      }
-    });
-  }
-
-  let favicon=document.querySelector('link[rel="icon"]')||document.querySelector('link[rel="shortcut icon"]');
-  if(!favicon){
-    favicon=document.createElement('link');
-    favicon.rel='icon';
-    document.head.appendChild(favicon);
-  }
-  favicon.href=logoUrl;
-}
-
 function renderGoogleButton(){if(!isGoogleConfigured())return;const target=document.querySelector("#googleSignInButton");if(!target||!window.google?.accounts?.id)return;target.innerHTML="";google.accounts.id.initialize({client_id:googleClientId,callback:handleGoogleCredential,auto_select:false});google.accounts.id.renderButton(target,{theme:"filled_black",size:"large",type:"standard",shape:"pill",text:"signin_with",logo_alignment:"left",locale:"vi",width:260})}
 window.initGoogleAuth=()=>renderGoogleButton();
 
@@ -1282,7 +1164,7 @@ function settingsPage(){
 }
 
 const pageRenderers={home:homePage,courses:coursesPage,decks:decksPage,inputData:inputDataPage,createDeck:createDeckPage,deckDetail:deckDetailPage,learnSession:learnSessionPage,quizExcel:quizExcelPage,practice:practicePage,exam:examPage,community:communityPage,stats:statsPage,calendar:calendarPage,leaderboard:leaderboardPage,settings:settingsPage};
-function render(){rememberNavigation();applyBackgroundStyle();document.body.classList.toggle("learn-mode",state.route==="learnSession");renderNav();renderUserUi();app.innerHTML=(pageRenderers[state.route]||homePage)();ensureFixedTopbar();applyCustomLogo();setTimeout(()=>{ensureFixedTopbar();applyCustomLogo()},0);window.scrollTo({top:0});}
+function render(){rememberNavigation();applyBackgroundStyle();document.body.classList.toggle("learn-mode",state.route==="learnSession");renderNav();renderUserUi();app.innerHTML=(pageRenderers[state.route]||homePage)();ensureFixedTopbar();setTimeout(ensureFixedTopbar,0);window.scrollTo({top:0});}
 
 document.addEventListener("click",e=>{
   const route=e.target.closest("[data-route]")?.dataset.route;if(route){routeTo(route);return}
@@ -1800,9 +1682,9 @@ document.querySelector("#profileButton").onclick=e=>{e.stopPropagation();documen
 document.querySelector("#notificationMenu").innerHTML=`<strong class="block p-3">Thông báo</strong><button class="dropdown-item">🔥 Chuỗi ${state.streak} ngày — tiếp tục nhé!</button><button class="dropdown-item">TOPIK II vừa có bài học mới</button>`;
 document.querySelector("#profileMenu").innerHTML=`<button class="dropdown-item" data-route="settings">Hồ sơ & cài đặt</button><button class="dropdown-item" data-action="upgrade">Nâng cấp Pro</button><button class="dropdown-item text-red-400">Đăng xuất</button>`;
 document.querySelector("#searchButton").onclick=()=>modal("Tìm kiếm nhanh",`<input id="globalSearch" class="input" autofocus placeholder="Tìm khóa học, bộ từ, từ vựng..."><div class="search-results">${decks.slice(0,3).map(d=>`<button class="dropdown-item" data-deck="${d.id}">${d.icon} ${d.name}</button>`).join("")}</div>`);
-document.addEventListener("click",e=>{if(!e.target.closest("#notificationButton")&&!e.target.closest("#notificationMenu"))document.querySelector("#notificationMenu").classList.remove("show");if(!e.target.closest("#profileButton")&&!e.target.closest("#profileMenu"))document.querySelector("#profileMenu").classList.remove("show");if(!e.target.closest("#hvqQuickBackgroundButton")&&!e.target.closest("#hvqQuickBackgroundPanel"))closeQuickBackgroundPanel()});
+document.addEventListener("click",e=>{if(!e.target.closest("#notificationButton")&&!e.target.closest("#notificationMenu"))document.querySelector("#notificationMenu").classList.remove("show");if(!e.target.closest("#profileButton")&&!e.target.closest("#profileMenu"))document.querySelector("#profileMenu").classList.remove("show")});
 
-async function initApp(){await loadCreatedDecks();render();setTimeout(applyCustomLogo,0)}
+async function initApp(){await loadCreatedDecks();render()}
 initApp();
 
 (function injectAiShortExplainStyle(){
