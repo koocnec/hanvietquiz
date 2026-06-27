@@ -48,6 +48,7 @@ const defaultLearnSettings={answerDefinition:true,answerTerm:false,starredOnly:f
 const defaultUser={name:"Khách",email:"",picture:"",sub:"",signedIn:false};
 const defaultBackground={mode:"preset",preset:"dotGrid",customUrl:"",opacity:1,overlay:0.08,blur:0};
 const defaultExcelQuiz={sourceUrl:"",pasteData:"",questions:[],index:0,score:0,answered:null,shuffle:true,autoAdvance:false,onlyWrong:false,onlyStarred:false,onlyUnmastered:false,pageFilter:"all",wrongIds:[],starredIds:[],correctIds:[],sourceName:"Chưa có dữ liệu"};
+const defaultQuickQuiz={deckIndex:null,cardOrder:[],options:[],questionKey:""};
 const blankLearnSessionStats=()=>({correctIds:[],wrongMap:{},wrongOrder:[],mode:"normal"});
 const savedInputSheets={
   "NhapLieu":"https://docs.google.com/spreadsheets/d/188bSTqmXvvU55ht8yJt-wlIwfP3mLiOhebhEStcAwvw/edit?gid=881137373#gid=881137373",
@@ -60,7 +61,7 @@ const savedInputColumns={
   "ngu phap":{termCol:"D",meaningCol:"E",exampleCol:"F",synonymCol:"G",mergeRows:true}
 };
 const defaultInputData={sourceType:"sheet",sheetUrl:savedInputSheets.NhapLieu,savedSheet:"NhapLieu",termCol:"B",meaningCol:"A",exampleCol:"C",synonymCol:"",autoDetect:true,mergeRows:false,folderSize:50,lastFileName:"",selected:true,lastAppliedAt:"",lastResult:null};
-const defaultState={route:"home",lastOpenedTab:"decks",streak:7,today:146,minutes:42,xp:2340,quizIndex:0,quizScore:0,quizAnswered:null,flashIndex:0,activeCreatedDeck:null,activeCreatedFolder:"",detailCardIndex:0,detailFlipped:false,detailMode:"flashcard",detailSearch:"",detailFilter:"all",detailSort:"original",detailProgress:{},detailStars:{},deckStudyStats:{},learnOrder:[],learnIndex:0,learnOptions:[],learnAnswered:null,learnCorrect:0,learnUnknown:0,learnCompleted:0,learnSessionStats:blankLearnSessionStats(),learnSettings:defaultLearnSettings,excelQuiz:defaultExcelQuiz,inputData:defaultInputData,theme:"dark",dailyGoal:30,notifications:true,background:defaultBackground,calendar:[2,4,6,8,10,12,14,16,18,20,22,24,26],favorites:[1,2],user:defaultUser,createdDecks:[],deckDraft:{title:"",description:"",isPublic:false,suggestions:true,cards:[blankDraftCard()]}};
+const defaultState={route:"home",lastOpenedTab:"decks",streak:7,today:146,minutes:42,xp:2340,quizIndex:0,quizScore:0,quizAnswered:null,quickQuiz:defaultQuickQuiz,flashIndex:0,activeCreatedDeck:null,activeCreatedFolder:"",detailCardIndex:0,detailFlipped:false,detailMode:"flashcard",detailSearch:"",detailFilter:"all",detailSort:"original",detailProgress:{},detailStars:{},deckStudyStats:{},learnOrder:[],learnIndex:0,learnOptions:[],learnAnswered:null,learnCorrect:0,learnUnknown:0,learnCompleted:0,learnSessionStats:blankLearnSessionStats(),learnSettings:defaultLearnSettings,excelQuiz:defaultExcelQuiz,inputData:defaultInputData,theme:"dark",dailyGoal:30,notifications:true,background:defaultBackground,calendar:[2,4,6,8,10,12,14,16,18,20,22,24,26],favorites:[1,2],user:defaultUser,createdDecks:[],deckDraft:{title:"",description:"",isPublic:false,suggestions:true,cards:[blankDraftCard()]}};
 const googleClientId=document.querySelector('meta[name="google-signin-client_id"]')?.content?.trim()||"";
 const freshDefaultState=()=>JSON.parse(JSON.stringify(defaultState));
 const storedState=JSON.parse(localStorage.getItem("hvq-state")||"{}");
@@ -74,6 +75,9 @@ state.learnSessionStats.wrongMap={...(state.learnSessionStats.wrongMap||{})};
 state.learnSessionStats.wrongOrder=Array.isArray(state.learnSessionStats.wrongOrder)?state.learnSessionStats.wrongOrder:[];
 state.learnSessionStats.correctIds=Array.isArray(state.learnSessionStats.correctIds)?state.learnSessionStats.correctIds:[];
 state.excelQuiz={...defaultExcelQuiz,...(state.excelQuiz||{})};
+state.quickQuiz={...defaultQuickQuiz,...(state.quickQuiz||{})};
+state.quickQuiz.cardOrder=Array.isArray(state.quickQuiz.cardOrder)?state.quickQuiz.cardOrder:[];
+state.quickQuiz.options=Array.isArray(state.quickQuiz.options)?state.quickQuiz.options:[];
 state.inputData={...defaultInputData,...(state.inputData||{})};
 state.deckStudyStats={...(state.deckStudyStats||{})};
 state.background={...defaultBackground,...(state.background||{})};
@@ -96,7 +100,7 @@ const HVQ_CLOUD_SYNC_APP="hanvietquiz";
 const HVQ_PERSONAL_FIELDS=[
   "activeCreatedDeck","activeCreatedFolder","detailCardIndex","detailFlipped","detailMode","detailSearch","detailFilter","detailSort",
   "detailProgress","detailStars","deckStudyStats","learnOrder","learnIndex","learnOptions","learnAnswered","learnCorrect","learnUnknown",
-  "learnCompleted","learnSessionStats","learnSettings","excelQuiz","inputData","deckDraft","editingDeckIndex","flashIndex"
+  "learnCompleted","learnSessionStats","learnSettings","excelQuiz","quickQuiz","inputData","deckDraft","editingDeckIndex","flashIndex"
 ];
 function hvqClone(value){return JSON.parse(JSON.stringify(value))}
 function hvqSafeJson(raw,fallback={}){try{return raw?JSON.parse(raw):fallback}catch{return fallback}}
@@ -109,7 +113,7 @@ function hvqPersonalDecksKey(accountKey=hvqCurrentAccountKey()){return `createdD
 function hvqBlankPersonalState(){return {
   activeCreatedDeck:null,activeCreatedFolder:"",detailCardIndex:0,detailFlipped:false,detailMode:"flashcard",detailSearch:"",detailFilter:"all",detailSort:"original",
   detailProgress:{},detailStars:{},deckStudyStats:{},learnOrder:[],learnIndex:0,learnOptions:[],learnAnswered:null,learnCorrect:0,learnUnknown:0,
-  learnCompleted:0,learnSessionStats:blankLearnSessionStats(),learnSettings:hvqClone(defaultLearnSettings),excelQuiz:hvqClone(defaultExcelQuiz),
+  learnCompleted:0,learnSessionStats:blankLearnSessionStats(),learnSettings:hvqClone(defaultLearnSettings),excelQuiz:hvqClone(defaultExcelQuiz),quickQuiz:hvqClone(defaultQuickQuiz),
   inputData:hvqClone(defaultInputData),deckDraft:hvqClone(defaultState.deckDraft),editingDeckIndex:null,flashIndex:0
 }}
 function hvqNormalizePersonalState(personal={}){
@@ -120,6 +124,9 @@ function hvqNormalizePersonalState(personal={}){
   next.learnSessionStats.wrongOrder=Array.isArray(next.learnSessionStats.wrongOrder)?next.learnSessionStats.wrongOrder:[];
   next.learnSessionStats.correctIds=Array.isArray(next.learnSessionStats.correctIds)?next.learnSessionStats.correctIds:[];
   next.excelQuiz={...defaultExcelQuiz,...(next.excelQuiz||{})};
+  next.quickQuiz={...defaultQuickQuiz,...(next.quickQuiz||{})};
+  next.quickQuiz.cardOrder=Array.isArray(next.quickQuiz.cardOrder)?next.quickQuiz.cardOrder:[];
+  next.quickQuiz.options=Array.isArray(next.quickQuiz.options)?next.quickQuiz.options:[];
   next.inputData={...defaultInputData,...(next.inputData||{})};
   if(next.inputData.savedSheet==="NhapLieu")next.inputData.mergeRows=false;
   next.deckDraft={...hvqClone(defaultState.deckDraft),...(next.deckDraft||{})};
@@ -1359,8 +1366,12 @@ function homeActivityStats(){
       if(status==="mastered")mastered++;
     });
   });
-  const percent=totalCards?Math.round(mastered/totalCards*100):0;
-  return {deckCount:created.length,totalCards,studied,mastered,studyCount,lastStudiedAt,percent};
+  // Tiến độ bộ thẻ tự tạo = số thẻ đã học thực tế / tổng thẻ tự tạo.
+  // Dùng số thẻ đã học thay vì chỉ "đã thuộc" để không còn hiện 0% khi đã học vài chục thẻ trong bộ lớn.
+  const rawPercent=totalCards?(studied/totalCards*100):0;
+  const percent=Number(rawPercent.toFixed(rawPercent>0&&rawPercent<1?1:0));
+  const percentText=totalCards?`${studied}/${totalCards} · ${percent}%`:"0/0 · 0%";
+  return {deckCount:created.length,totalCards,studied,mastered,studyCount,lastStudiedAt,percent,percentText};
 }
 
 
@@ -1444,11 +1455,91 @@ function homeLearningDeckItems(){
     .sort((a,b)=>String(b.sortDate||"").localeCompare(String(a.sortDate||""))||String(a.deck.title||"").localeCompare(String(b.deck.title||""),"vi",{numeric:true}))
     .slice(0,10);
 }
-function homeLearningDeckLanguage(deck){
+function latestHomeLearningDeckItem(){
+  return homeLearningDeckItems()[0]||null;
+}
+function openQuickReviewLatestDeck(){
+  const item=latestHomeLearningDeckItem();
+  closeModal();
+  if(item&&state.createdDecks?.[item.index]?.cards?.length){
+    const stats=getDeckStudyStats(item.index);
+    const total=state.createdDecks[item.index].cards.length;
+    const startIndex=Number.isInteger(stats.lastCardIndex)?Math.min(Math.max(stats.lastCardIndex,0),total-1):0;
+    state.activeCreatedDeck=item.index;
+    state.flashIndex=startIndex;
+    state.route="practice";
+    touchDeckStudyStats(item.index,{increment:true,lastCardIndex:startIndex});
+    save();
+    render();
+    setTimeout(()=>selectPractice("flashcard"),0);
+    return;
+  }
+  state.activeCreatedDeck=null;
+  state.flashIndex=0;
+  state.route="practice";
+  save();
+  render();
+  setTimeout(()=>selectPractice("flashcard"),0);
+}
+
+function openQuickQuizLatestDeck(){
+  const item=latestHomeLearningDeckItem();
+  closeModal();
+  if(item&&state.createdDecks?.[item.index]?.cards?.length){
+    state.activeCreatedDeck=item.index;
+    state.quizIndex=0;
+    state.quizScore=0;
+    state.quizAnswered=null;
+    state.quickQuiz={...defaultQuickQuiz,deckIndex:item.index};
+    state.route="practice";
+    touchDeckStudyStats(item.index,{increment:true,lastCardIndex:0});
+    save();
+    render();
+    setTimeout(()=>selectPractice("quiz"),0);
+    return;
+  }
+  state.activeCreatedDeck=null;
+  state.quizIndex=0;
+  state.quizScore=0;
+  state.quizAnswered=null;
+  state.quickQuiz={...defaultQuickQuiz};
+  state.route="practice";
+  save();
+  render();
+  setTimeout(()=>selectPractice("quiz"),0);
+}
+function homeDefinitionPreviewText(value=""){
+  const text=cleanInputText(value).replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();
+  if(!text)return "Chưa có định nghĩa";
+  return text.length>70?`${text.slice(0,70).trim()}…`:text;
+}
+function hvqFlagIconHtml(code="vn",label=""){
+  const safeCode=String(code||"vn").trim().toLowerCase();
+  const safeLabel=escapeAttr(label||safeCode.toUpperCase());
+  return `<img class="hvq-inline-flag" src="https://flagcdn.com/${safeCode}.svg" alt="${safeLabel}" loading="lazy" referrerpolicy="no-referrer">`;
+}
+function hvqDetectLanguageLabel(value=""){
+  const text=cleanInputText(value).replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();
+  if(!text)return {code:"vn",label:"Chưa có định nghĩa"};
+  if(/[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(text))return {code:"kr",label:"Tiếng Hàn"};
+  if(/[ぁ-んァ-ン]/.test(text))return {code:"jp",label:"Tiếng Nhật"};
+  if(/[一-龯]/.test(text))return {code:"cn",label:"Tiếng Trung"};
+  return {code:"vn",label:"Tiếng Việt"};
+}
+function homeLearningDeckLanguage(deck,index=null){
   const cards=Array.isArray(deck?.cards)?deck.cards:[];
-  const sample=cards.find(c=>String(c?.definition||"").trim())?.definition||"";
-  if(/[가-힣]/.test(sample))return "🇰🇷 Định nghĩa: 한국어";
-  return "🇻🇳 Định nghĩa: Tiếng Việt";
+  if(!cards.length)return `${hvqFlagIconHtml("vn","Tiếng Việt")} Định nghĩa: Chưa có định nghĩa`;
+  const stats=Number.isInteger(index)?getDeckStudyStats(index):{};
+  const preferredIndex=Number.isInteger(stats?.lastCardIndex)?stats.lastCardIndex:Number.isInteger(state.learnIndex)?state.learnIndex:0;
+  const safeIndex=Math.max(0,Math.min(preferredIndex,cards.length-1));
+  const ordered=[...cards.slice(safeIndex),...cards.slice(0,safeIndex)];
+  const card=ordered.find(c=>cleanInputText(c?.definition))||ordered.find(c=>cleanInputText(c?.synonyms))||ordered.find(c=>cleanInputText(c?.term))||cards[0];
+
+  // Ở thẻ trang chủ chỉ hiển thị NGÔN NGỮ của mặt định nghĩa, không hiển thị nội dung định nghĩa cụ thể.
+  // Ví dụ mặt định nghĩa là “아/어서” thì hiện cờ Hàn Quốc + “Định nghĩa: Tiếng Hàn”.
+  const definitionSideText=cleanInputText(card?.definition)||cleanInputText(card?.synonyms)||cleanInputText(card?.term)||cleanInputText(card?.example)||"";
+  const lang=hvqDetectLanguageLabel(definitionSideText);
+  return `${hvqFlagIconHtml(lang.code,lang.label)} Định nghĩa: ${escapeHtml(lang.label)}`;
 }
 function homeLearningDeckCards(){
   const user=currentUser();
@@ -1466,7 +1557,7 @@ function homeLearningDeckCards(){
     const pct=total?Math.min(100,Math.round(done/total*100)):0;
     return `<article class="hvq-home-learning-card" data-created-deck="${index}">
       <h3 class="hvq-home-deck-title">${escapeHtml(deck.title||"Bộ từ chưa đặt tên")}</h3>
-      <div class="hvq-home-deck-lang">${homeLearningDeckLanguage(deck)}</div>
+      <div class="hvq-home-deck-lang">${homeLearningDeckLanguage(deck,index)}</div>
       <div class="hvq-home-progress-row"><div class="hvq-home-progress-track"><div class="hvq-home-progress-fill" style="width:${pct}%"></div></div><span class="hvq-home-progress-text">${done}/${total}</span></div>
       <div class="hvq-home-study-time">${icon("clock")} Học lần cuối: ${formatLastStudied(lastStudiedAt)}</div>
       <div class="hvq-home-deck-bottom"><span class="hvq-home-pill">${total} từ</span><span class="hvq-home-pill">${icon("user-round")} ${escapeHtml(user.name||"T- Creation")}</span></div>
@@ -1486,7 +1577,16 @@ function homeLearningSection(){
   </section>`;
 }
 
-function homePage(){
+
+function ensureInlineFlagStyle(){
+  if(document.querySelector("#hvqInlineFlagStyle"))return;
+  const style=document.createElement("style");
+  style.id="hvqInlineFlagStyle";
+  style.textContent=`.hvq-inline-flag{display:inline-block;width:18px;height:13px;object-fit:cover;vertical-align:-2px;border-radius:2px;margin-right:6px;box-shadow:0 0 0 1px rgba(255,255,255,.12)}`;
+  document.head.appendChild(style);
+}
+
+function homePage(){ensureInlineFlagStyle();
   ensureHomeLearningStyle();
   const user=currentUser(),firstName=user.name.split(/\s+/).filter(Boolean).slice(-1)[0]||user.name;
   const loginAction=user.signedIn?"":button(`${icon("log-in")} Đăng nhập Google`,"sign-in-google");
@@ -1494,7 +1594,7 @@ function homePage(){
   return header(`Xin chào, ${escapeHtml(firstName)} 👋`,"",loginAction+button(`${icon("rotate-ccw")} Ôn tập nhanh`,"review")+button(`${icon("play")} Học ngay`,"study","primary"))+
   `<div class="grid-dashboard">
     <div class="stack">
-      <section class="card section-card"><div class="section-title"><h2>${icon("activity")} Hoạt động học tập</h2></div><div class="stats-grid"><div class="stat"><strong class="text-indigo-400">${real.studied}</strong><small>Thẻ đã học</small></div><div class="stat"><strong class="text-emerald-400">${real.mastered}</strong><small>Đã thuộc</small></div></div><div class="mt-4"><div class="flex justify-between text-xs mb-2"><span>Tiến độ bộ thẻ tự tạo</span><span>${real.percent}%</span></div>${progress(real.percent)}</div><div class="mt-5 p-4 rounded-xl bg-amber-500/10"><strong>${icon("folder-check")} ${real.deckCount} bộ · ${real.totalCards} thẻ</strong><p class="muted text-xs mt-1">Lần học gần nhất: ${formatLastStudied(real.lastStudiedAt)} · Tổng lượt học: ${real.studyCount}</p></div></section>
+      <section class="card section-card"><div class="section-title"><h2>${icon("activity")} Hoạt động học tập</h2></div><div class="stats-grid"><div class="stat"><strong class="text-indigo-400">${real.studied}</strong><small>Thẻ đã học</small></div><div class="stat"><strong class="text-emerald-400">${real.mastered}</strong><small>Đã thuộc</small></div></div><div class="mt-4"><div class="flex justify-between text-xs mb-2"><span>Tiến độ bộ thẻ tự tạo</span><span>${real.percentText}</span></div>${progress(real.percent)}</div></section>
     </div>
     <div class="stack">
       ${homeLearningSection()}
@@ -1536,15 +1636,18 @@ function getDeckStudyStats(index){
   const key=deckStudyId(deck,index);
   return state.deckStudyStats?.[key]||deck?.studyStats||{studyCount:0,lastStudiedAt:""};
 }
-function touchDeckStudyStats(index,{increment=false}={}){
+function touchDeckStudyStats(index,{increment=false,lastCardIndex=null}={}){
   const deck=state.createdDecks?.[index];
   if(!deck)return;
   state.deckStudyStats={...(state.deckStudyStats||{})};
   const key=deckStudyId(deck,index),prev=getDeckStudyStats(index);
-  state.deckStudyStats[key]={
+  const next={
     studyCount:Math.max(0,Number(prev.studyCount)||0)+(increment?1:0),
     lastStudiedAt:new Date().toISOString()
   };
+  if(Number.isInteger(lastCardIndex))next.lastCardIndex=lastCardIndex;
+  else if(Number.isInteger(prev.lastCardIndex))next.lastCardIndex=prev.lastCardIndex;
+  state.deckStudyStats[key]=next;
 }
 function formatLastStudied(value){
   if(!value)return "Chưa học";
@@ -1559,10 +1662,15 @@ function formatLastStudied(value){
 }
 function createdDeckProgressInfo(index){
   const deck=state.createdDecks?.[index]||{},total=deck.cards?.length||0;
-  let mastered=0;
-  for(let i=0;i<total;i++)if(state.detailProgress?.[`${index}:${i}`]==="mastered")mastered++;
+  let mastered=0,studied=0;
+  for(let i=0;i<total;i++){
+    const status=state.detailProgress?.[`${index}:${i}`];
+    if(status)studied++;
+    if(status==="mastered")mastered++;
+  }
+  const done=mastered||studied;
   const stats=getDeckStudyStats(index);
-  return {total,mastered,percent:total?Math.round(mastered/total*100):0,studyCount:Number(stats.studyCount)||0,lastStudiedAt:stats.lastStudiedAt||""};
+  return {total,studied,mastered,done,percent:total?Math.round(done/total*100):0,studyCount:Number(stats.studyCount)||0,lastStudiedAt:stats.lastStudiedAt||""};
 }
 function createdDeckCard(d,i){
   const info=createdDeckProgressInfo(i),user=currentUser();
@@ -1570,7 +1678,7 @@ function createdDeckCard(d,i){
     <div class="flex justify-between items-start"><span class="text-xl">📄</span><span class="pill">${info.total} từ</span></div>
     <h3>${escapeHtml(d.title)}</h3>
     <p class="muted text-xs">${escapeHtml(d.description||createdFolderName(d)||"Bộ thẻ riêng")}</p>
-    <div class="created-progress-line mt-4"><div class="created-progress-bar">${progress(info.percent)}</div><strong>${info.mastered}/${info.total}</strong></div>
+    <div class="created-progress-line mt-4"><div class="created-progress-bar">${progress(info.percent)}</div><strong>${info.done}/${info.total}</strong></div>
     <div class="created-study-meta">
       <span>${icon("clock")} Học lần cuối: ${formatLastStudied(info.lastStudiedAt)}</span>
       <span>${icon("repeat-2")} Đã học: ${info.studyCount} lần</span>
@@ -2091,6 +2199,102 @@ function buildLearnOptions(cardIndex){
   while(wrong.length<3)wrong.push({cardIndex:-wrong.length-1,text:fallbacks[wrong.length],groupKey:`fallback-${wrong.length}`});
   return shuffled([correct,...wrong]);
 }
+
+// ===== HVQ QUICK QUIZ FROM LATEST CREATED DECK =====
+// Quiz nhanh không dùng 3 câu demo nữa. Nó ưu tiên bộ thẻ tự tạo đang mở,
+// nếu chưa mở bộ nào thì tự lấy học phần gần nhất trên Trang chủ / tab Đã tạo.
+function quickQuizDeckIndex(){
+  if(Number.isInteger(state.activeCreatedDeck)&&state.createdDecks?.[state.activeCreatedDeck]?.cards?.length)return state.activeCreatedDeck;
+  const item=latestHomeLearningDeckItem();
+  return Number.isInteger(item?.index)?item.index:null;
+}
+function quickQuizAnswer(card){
+  if(hasRealDefinition(card))return cleanInputText(card.definition);
+  const synonym=primarySynonym(card);
+  if(synonym)return cleanInputText(synonym);
+  if(cleanInputText(card?.pronunciation))return cleanInputText(card.pronunciation);
+  if(cleanInputText(card?.wordType)&&!/^Nhóm gốc:/i.test(String(card.wordType)))return cleanInputText(card.wordType);
+  return "";
+}
+function quickQuizValidCardIndexes(deck){
+  const cards=Array.isArray(deck?.cards)?deck.cards:[];
+  return cards.map((card,index)=>({card,index,answer:quickQuizAnswer(card)}))
+    .filter(item=>cleanInputText(item.card?.term)&&cleanInputText(item.answer)&&normalizeLearnText(item.answer)!==normalizeLearnText(item.card.term))
+    .map(item=>item.index);
+}
+function ensureQuickQuizForDeck(index=quickQuizDeckIndex()){
+  if(!Number.isInteger(index)||!state.createdDecks?.[index]?.cards?.length)return null;
+  const deck=state.createdDecks[index];
+  const valid=quickQuizValidCardIndexes(deck);
+  if(!valid.length)return null;
+  const current=state.quickQuiz||{};
+  const sameDeck=current.deckIndex===index;
+  const sameCount=Array.isArray(current.cardOrder)&&current.cardOrder.length===valid.length;
+  if(!sameDeck||!sameCount){
+    state.quickQuiz={...defaultQuickQuiz,deckIndex:index,cardOrder:valid};
+    state.quizIndex=0;
+    state.quizAnswered=null;
+  }else{
+    state.quickQuiz={...defaultQuickQuiz,...current,deckIndex:index,cardOrder:current.cardOrder.filter(i=>valid.includes(i))};
+    if(!state.quickQuiz.cardOrder.length)state.quickQuiz.cardOrder=valid;
+  }
+  if(Number(state.quizIndex)>=state.quickQuiz.cardOrder.length)state.quizIndex=0;
+  return {deck,index,order:state.quickQuiz.cardOrder};
+}
+function quickQuizTotal(){
+  const ctx=ensureQuickQuizForDeck();
+  return ctx?.order?.length||0;
+}
+function buildQuickQuizOptions(deckIndex,cardIndex){
+  const deck=state.createdDecks?.[deckIndex];
+  const current=deck?.cards?.[cardIndex]||{};
+  const correctText=quickQuizAnswer(current)||"Chưa có định nghĩa";
+  const currentNorm=normalizeLearnText(correctText);
+  const currentTermNorm=normalizeLearnText(current.term);
+  const currentGroupKey=cardGroupKey(current,cardIndex);
+  const seen=new Set([currentNorm,currentTermNorm].filter(Boolean));
+  const wrong=[];
+  const pool=(deck?.cards||[]).map((card,index)=>({index,card,text:quickQuizAnswer(card),groupKey:cardGroupKey(card,index)}))
+    .filter(item=>item.index!==cardIndex&&cleanInputText(item.text)&&item.groupKey!==currentGroupKey);
+  for(const item of shuffled(pool)){
+    const norm=normalizeLearnText(item.text);
+    if(!norm||seen.has(norm)||shouldHideAsSameQuestionAnswer(item.text,current.term))continue;
+    wrong.push({text:item.text,cardIndex:item.index,correct:false});
+    seen.add(norm);
+    if(wrong.length>=3)break;
+  }
+  const fallbacks=["Chưa xác định","Một đáp án khác","Không phải nghĩa này","Tất cả đều sai"];
+  while(wrong.length<3){
+    const text=fallbacks[wrong.length];
+    wrong.push({text,cardIndex:-wrong.length-1,correct:false});
+  }
+  return shuffled([{text:correctText,cardIndex,correct:true},...wrong]).slice(0,4);
+}
+function currentQuickQuizQuestion(){
+  const ctx=ensureQuickQuizForDeck();
+  if(!ctx)return null;
+  const pos=(Number(state.quizIndex)||0)%ctx.order.length;
+  const cardIndex=ctx.order[pos];
+  const card=ctx.deck.cards[cardIndex];
+  const key=`${ctx.index}:${cardIndex}:${pos}:${cleanInputText(card.term)}:${quickQuizAnswer(card)}`;
+  if(!state.quickQuiz||state.quickQuiz.questionKey!==key||!Array.isArray(state.quickQuiz.options)||!state.quickQuiz.options.length){
+    state.quickQuiz={...defaultQuickQuiz,...(state.quickQuiz||{}),deckIndex:ctx.index,cardOrder:ctx.order,questionKey:key,options:buildQuickQuizOptions(ctx.index,cardIndex)};
+  }
+  const answerIndex=state.quickQuiz.options.findIndex(o=>o.correct);
+  return {
+    deck:ctx.deck,
+    deckIndex:ctx.index,
+    cardIndex,
+    pos,
+    total:ctx.order.length,
+    q:`${card.term||"—"} có nghĩa là gì?`,
+    options:state.quickQuiz.options.map(o=>o.text),
+    answer:answerIndex>=0?answerIndex:0
+  };
+}
+function resetQuickQuizQuestionOptions(){
+  state.quickQuiz={...defaultQuickQuiz,...(state.quickQuiz||{}),options:[],questionKey:""};
+}
 function practicePage(){
   const tabs=[["flashcard","Flashcard"],["quiz","Quiz nhanh"],["dictionary","Tra từ"]];
   return header("Luyện tập","Chọn phương pháp phù hợp với mục tiêu hôm nay.")+`<div class="tabs">${tabs.map(([k,n],i)=>`<button class="tab-button ${i===0?"active":""}" data-practice-tab="${k}">${n}</button>`).join("")}</div><div id="practicePanel">${flashcardPanel()}</div>`;
@@ -2098,8 +2302,12 @@ function practicePage(){
 function currentFlashcards(){if(Number.isInteger(state.activeCreatedDeck)&&state.createdDecks[state.activeCreatedDeck])return state.createdDecks[state.activeCreatedDeck].cards.map(c=>({term:c.term||"—",reading:c.pronunciation||c.wordType||"",meaning:c.definition||"Chưa có định nghĩa",example:c.example||"",synonyms:c.synonyms||"",image:c.image||""}));return words}
 function flashcardPanel(){const source=currentFlashcards();const index=(state.flashIndex||0)%source.length;const w=source[index];const title=Number.isInteger(state.activeCreatedDeck)&&state.createdDecks[state.activeCreatedDeck]?state.createdDecks[state.activeCreatedDeck].title:"Flashcard";return `<div class="quiz-shell"><div class="flex justify-between items-center mb-3"><strong>${escapeHtml(title)}</strong><span class="pill">${index+1}/${source.length}</span></div><div id="flashcard" class="card flashcard"><div>${w.image?`<img src="${w.image}" alt="" class="mx-auto mb-5 max-h-32 rounded-xl">`:""}<div class="term">${escapeHtml(w.term)}</div><p class="hint muted mt-4">Chạm để xem đáp án</p><div class="answer">${w.reading?`<p class="text-indigo-400">${escapeHtml(w.reading)}</p>`:""}<h2>${escapeHtml(w.meaning)}</h2>${w.example?`<p class="muted">${escapeHtml(w.example)}</p>`:""}${w.synonyms?`<p class="muted text-sm">Đồng nghĩa: ${escapeHtml(w.synonyms)}</p>`:""}</div></div></div><div class="flex justify-center gap-2 mt-4"><button class="button danger" data-rate="again">Chưa nhớ</button><button class="button" data-rate="hard">Khó</button><button class="button primary" data-rate="easy">Đã nhớ</button></div></div>`}
 function quizPanel(){
-  const q=quizQuestions[state.quizIndex%quizQuestions.length];
-  return `<div class="quiz-shell card section-card"><div class="flex justify-between"><span class="pill">Câu ${state.quizIndex+1}/${quizQuestions.length}</span><strong>${state.quizScore} điểm</strong></div><h2 class="my-6">${q.q}</h2><div>${q.options.map((o,i)=>`<button class="quiz-option ${state.quizAnswered===i?(i===q.answer?"correct":"wrong"):""} ${state.quizAnswered!==null&&i===q.answer?"correct":""}" data-answer="${i}" ${state.quizAnswered!==null?"disabled":""}>${String.fromCharCode(65+i)}. ${o}</button>`).join("")}</div>${state.quizAnswered!==null?`<button class="button primary mt-5" data-action="next-question">Câu tiếp theo</button>`:""}</div>`}
+  const q=currentQuickQuizQuestion();
+  if(!q){
+    const hasDecks=Array.isArray(state.createdDecks)&&state.createdDecks.some(deck=>Array.isArray(deck.cards)&&deck.cards.length);
+    return `<div class="quiz-shell card section-card text-center"><h2>${hasDecks?"Bộ thẻ này chưa đủ dữ liệu để tạo Quiz nhanh":"Chưa có bộ thẻ tự tạo"}</h2><p class="muted my-4">Quiz nhanh sẽ lấy câu hỏi từ học phần gần nhất trong tab Đã tạo, không dùng bộ mẫu 3 câu nữa.</p><button class="button primary" data-route="decks">Mở tab Đã tạo</button></div>`;
+  }
+  return `<div class="quiz-shell card section-card"><div class="flex justify-between"><span class="pill">${escapeHtml(q.deck.title||"Bộ thẻ")} · Câu ${q.pos+1}/${q.total}</span><strong>${state.quizScore} điểm</strong></div><h2 class="my-6">${escapeHtml(q.q)}</h2><div>${q.options.map((o,i)=>`<button class="quiz-option ${state.quizAnswered===i?(i===q.answer?"correct":"wrong"):""} ${state.quizAnswered!==null&&i===q.answer?"correct":""}" data-answer="${i}" ${state.quizAnswered!==null?"disabled":""}>${String.fromCharCode(65+i)}. ${escapeHtml(o)}</button>`).join("")}</div>${state.quizAnswered!==null?`<button class="button primary mt-5" data-action="next-question">Câu tiếp theo</button>`:""}</div>`}
 function quizExcelPage(){
   const qz=state.excelQuiz,questions=excelActiveQuestions(),current=questions[qz.index%Math.max(questions.length,1)];
   const preview=(qz.questions||[]).slice(0,5);
@@ -2289,12 +2497,12 @@ document.addEventListener("click",e=>{
     if(action==="reset-background"){resetBackground();return}
     if(action==="clear-background"){state.background={...defaultBackground,mode:"none",customUrl:""};save();applyBackgroundStyle();closeQuickBackgroundPanel();render();showToast("Đã tắt hình nền");return}
     if(action==="study"){closeModal();openLastStudyTab();return}
-    if(["review","flashcard"].includes(action)){closeModal();state.activeCreatedDeck=null;state.flashIndex=0;state.route="practice";save();render();return}
-    if(action==="quiz"){closeModal();state.route="practice";save();render();setTimeout(()=>selectPractice("quiz"),0);return}
+    if(["review","flashcard"].includes(action)){openQuickReviewLatestDeck();return}
+    if(action==="quiz"){openQuickQuizLatestDeck();return}
     if(action==="dictionary"){closeModal();state.route="practice";save();render();setTimeout(()=>selectPractice("dictionary"),0);return}
     if(action==="stats"){routeTo("stats");return}
     if(action==="lookup"){lookup();return}
-    if(action==="next-question"){state.quizIndex=(state.quizIndex+1)%quizQuestions.length;state.quizAnswered=null;save();document.querySelector("#practicePanel").innerHTML=quizPanel();return}
+    if(action==="next-question"){const total=quickQuizTotal();state.quizIndex=total?(state.quizIndex+1)%total:0;state.quizAnswered=null;resetQuickQuizQuestionOptions();save();document.querySelector("#practicePanel").innerHTML=quizPanel();return}
     if(action==="excel-load-url"){loadExcelUrl();return}
     if(action==="excel-pick-file"){pickExcelFile();return}
     if(action==="excel-load-sample"){loadExcelSample();return}
@@ -2373,8 +2581,23 @@ document.addEventListener("click",e=>{
   if(e.target.closest("#detailFlashcard")&&!e.target.closest("button")){state.detailFlipped=!state.detailFlipped;save();render();return}
   const courseFilter=e.target.closest("[data-filter-course]")?.dataset.filterCourse;if(courseFilter!==undefined){document.querySelectorAll("[data-filter-course]").forEach(x=>x.classList.toggle("active",x.dataset.filterCourse===courseFilter));document.querySelector("#courseResults").innerHTML=courseFilter==="2"?'<p class="empty card">Bạn chưa hoàn thành khóa học nào.</p>':courseRows();return}
   if(e.target.closest("#flashcard")){e.target.closest("#flashcard").classList.toggle("flipped");return}
-  const rate=e.target.closest("[data-rate]")?.dataset.rate;if(rate){const source=currentFlashcards();state.flashIndex=((state.flashIndex||0)+1)%source.length;if(rate==="easy"){state.xp+=10;state.today+=1}save();document.querySelector("#practicePanel").innerHTML=flashcardPanel();showToast(rate==="easy"?"Đã ghi nhớ +10 XP":"Đã xếp lịch ôn lại");return}
-  const answer=e.target.closest("[data-answer]")?.dataset.answer;if(answer!==undefined){const q=quizQuestions[state.quizIndex%quizQuestions.length];state.quizAnswered=Number(answer);if(Number(answer)===q.answer){state.quizScore+=10;state.xp+=10;showToast("Chính xác! +10 XP")}else showToast("Chưa đúng, xem đáp án nhé","circle-x");save();document.querySelector("#practicePanel").innerHTML=quizPanel();return}
+  const rate=e.target.closest("[data-rate]")?.dataset.rate;if(rate){
+    const source=currentFlashcards();
+    const currentIndex=(state.flashIndex||0)%Math.max(source.length,1);
+    const nextIndex=(currentIndex+1)%Math.max(source.length,1);
+    if(Number.isInteger(state.activeCreatedDeck)&&state.createdDecks?.[state.activeCreatedDeck]){
+      state.detailProgress={...(state.detailProgress||{})};
+      state.detailProgress[`${state.activeCreatedDeck}:${currentIndex}`]=rate==="easy"?"mastered":"learning";
+      touchDeckStudyStats(state.activeCreatedDeck,{increment:nextIndex===0,lastCardIndex:nextIndex});
+    }
+    state.flashIndex=nextIndex;
+    if(rate==="easy"){state.xp+=10;state.today+=1}
+    save();
+    document.querySelector("#practicePanel").innerHTML=flashcardPanel();
+    showToast(rate==="easy"?"Đã ghi nhớ +10 XP":"Đã cập nhật tiến độ ôn lại");
+    return
+  }
+  const answer=e.target.closest("[data-answer]")?.dataset.answer;if(answer!==undefined){const q=currentQuickQuizQuestion();if(!q){showToast("Chưa có câu hỏi quiz","circle-alert");return}state.quizAnswered=Number(answer);if(Number(answer)===q.answer){state.quizScore+=10;state.xp+=10;if(Number.isInteger(q.deckIndex)&&Number.isInteger(q.cardIndex)){state.detailProgress={...(state.detailProgress||{})};state.detailProgress[`${q.deckIndex}:${q.cardIndex}`]="mastered";touchDeckStudyStats(q.deckIndex,{lastCardIndex:(q.pos+1)%q.total});}showToast("Chính xác! +10 XP")}else{if(Number.isInteger(q.deckIndex)&&Number.isInteger(q.cardIndex)){state.detailProgress={...(state.detailProgress||{})};state.detailProgress[`${q.deckIndex}:${q.cardIndex}`]="learning";touchDeckStudyStats(q.deckIndex,{lastCardIndex:q.pos});}showToast("Chưa đúng, xem đáp án nhé","circle-x")}save();document.querySelector("#practicePanel").innerHTML=quizPanel();return}
   const excelAnswer=e.target.closest("[data-excel-answer]")?.dataset.excelAnswer;if(excelAnswer!==undefined){answerExcelQuestion(Number(excelAnswer));return}
   const inputStep=e.target.closest("[data-input-step]");if(inputStep){const key=inputStep.dataset.inputStep,step=Number(inputStep.dataset.step||0);state.inputData[key]=Math.max(1,Number(state.inputData[key]||0)+step);save();render();return}
   const calendar=e.target.closest("[data-calendar-day]")?.dataset.calendarDay;if(calendar){const d=Number(calendar);state.calendar=state.calendar.includes(d)?state.calendar.filter(x=>x!==d):[...state.calendar,d];save();render();return}
@@ -2433,7 +2656,18 @@ document.addEventListener("keydown",e=>{
   },{passive:false});
 })();
 
-function selectPractice(name){document.querySelectorAll("[data-practice-tab]").forEach(x=>x.classList.toggle("active",x.dataset.practiceTab===name));document.querySelector("#practicePanel").innerHTML=name==="quiz"?quizPanel():name==="dictionary"?dictionaryPanel():flashcardPanel()}
+function selectPractice(name){
+  if(name==="quiz"){
+    const deckIndex=quickQuizDeckIndex();
+    if(Number.isInteger(deckIndex)){
+      state.activeCreatedDeck=deckIndex;
+      ensureQuickQuizForDeck(deckIndex);
+    }
+  }
+  document.querySelectorAll("[data-practice-tab]").forEach(x=>x.classList.toggle("active",x.dataset.practiceTab===name));
+  const panel=document.querySelector("#practicePanel");
+  if(panel)panel.innerHTML=name==="quiz"?quizPanel():name==="dictionary"?dictionaryPanel():flashcardPanel();
+}
 function excelActiveQuestions(){
   const qz=state.excelQuiz;
   let base=qz.questions||[];
