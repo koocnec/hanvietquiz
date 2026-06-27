@@ -91,7 +91,7 @@ const HVQ_PERSONAL_SCOPE_VERSION="v7";
 // 2) Deploy dạng Web app: Execute as Me, Who has access: Anyone.
 // 3) Dán URL /exec vào đây, ví dụ: const HVQ_CLOUD_SYNC_URL="https://script.google.com/macros/s/AKfycb.../exec";
 // Khi để trống, app vẫn chạy bình thường nhưng dữ liệu chỉ lưu trên từng thiết bị.
-const HVQ_CLOUD_SYNC_URL="";
+const HVQ_CLOUD_SYNC_URL="https://script.google.com/macros/s/AKfycbz6vt-7sjdo1sWL-B9LriOf6rwn2E3sy2dgqZstMD-m0Kn95Q2WE8NL721ON9UJOj7x7g/exec";
 const HVQ_CLOUD_SYNC_APP="hanvietquiz";
 const HVQ_PERSONAL_FIELDS=[
   "activeCreatedDeck","activeCreatedFolder","detailCardIndex","detailFlipped","detailMode","detailSearch","detailFilter","detailSort",
@@ -2750,3 +2750,158 @@ if(!window.__hvqMobileBottomNavV11Resize){
   window.__hvqMobileBottomNavV11Resize=true;
   window.addEventListener("resize",()=>applyMobileTopbarCompactMode(),{passive:true});
 }
+
+
+// HVQ_MOBILE_NO_ZOOM_FIX_V1 - khóa layout mobile đúng 1 màn hình, không bị zoom/pan ngang trên iPhone
+(function injectMobileNoZoomFix(){
+  if(typeof document==="undefined")return;
+  const applyViewport=()=>{
+    let meta=document.querySelector('meta[name="viewport"]');
+    if(!meta){
+      meta=document.createElement('meta');
+      meta.name='viewport';
+      document.head.prepend(meta);
+    }
+    meta.setAttribute('content','width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');
+  };
+  const applyRootLock=()=>{
+    document.documentElement.style.setProperty('width','100%','important');
+    document.documentElement.style.setProperty('max-width','100vw','important');
+    document.documentElement.style.setProperty('overflow-x','hidden','important');
+    document.body?.style.setProperty('width','100%','important');
+    document.body?.style.setProperty('max-width','100vw','important');
+    document.body?.style.setProperty('overflow-x','hidden','important');
+  };
+  applyViewport();
+  applyRootLock();
+  if(!document.getElementById('hvq-mobile-no-zoom-style')){
+    const style=document.createElement('style');
+    style.id='hvq-mobile-no-zoom-style';
+    style.textContent=`
+      html,body{max-width:100vw!important;overflow-x:hidden!important}
+      *,*::before,*::after{box-sizing:border-box}
+      @media(max-width:640px){
+        html,body{
+          width:100%!important;
+          min-width:0!important;
+          max-width:100vw!important;
+          overflow-x:hidden!important;
+          overscroll-behavior-x:none!important;
+          touch-action:pan-y!important;
+        }
+        body{margin:0!important}
+        .app-shell,.content,#app,main,.main,.main-content,.workspace,.page{
+          width:100%!important;
+          min-width:0!important;
+          max-width:100vw!important;
+          margin-left:0!important;
+          margin-right:0!important;
+          overflow-x:hidden!important;
+        }
+        .content,#app,main,.main-content,.workspace,.page{
+          padding-left:12px!important;
+          padding-right:12px!important;
+        }
+        .page-header,.card,.section-card,.quiz-shell,.excel-shell,.excel-card,.excel-quiz-card,
+        .deck-grid,.created-deck-grid,.folder-grid,.card-groups,.table-wrap,
+        .learn-session,.learn-topbar,.learn-question-card,.learn-options,.learn-feedback,
+        .ai-short-explain,.ai-short-explain .ai-explain-content,.ai-short-explain .ai-short-box{
+          width:100%!important;
+          min-width:0!important;
+          max-width:100%!important;
+          overflow-wrap:anywhere!important;
+        }
+        .learn-session{
+          display:block!important;
+          padding:0 0 calc(88px + env(safe-area-inset-bottom,0px))!important;
+          margin:0!important;
+          overflow-x:hidden!important;
+        }
+        .learn-topbar{
+          display:flex!important;
+          align-items:center!important;
+          justify-content:space-between!important;
+          gap:8px!important;
+          padding:6px 0 12px!important;
+          margin:0!important;
+        }
+        .learn-question-card{
+          display:block!important;
+          max-width:calc(100vw - 24px)!important;
+          margin:0 auto 16px!important;
+          padding:16px!important;
+          border-radius:18px!important;
+        }
+        .learn-question-head{
+          display:flex!important;
+          align-items:flex-start!important;
+          justify-content:space-between!important;
+          gap:10px!important;
+          width:100%!important;
+          min-width:0!important;
+        }
+        .learn-term{
+          flex:1 1 auto!important;
+          min-width:0!important;
+          max-width:100%!important;
+          font-size:22px!important;
+          line-height:1.25!important;
+          word-break:break-word!important;
+          overflow-wrap:anywhere!important;
+          white-space:normal!important;
+        }
+        .learn-question-tools{
+          flex:0 0 auto!important;
+          display:flex!important;
+          align-items:center!important;
+          justify-content:flex-end!important;
+          gap:5px!important;
+          min-width:auto!important;
+        }
+        .learn-question-tools button{
+          width:34px!important;
+          height:34px!important;
+          min-width:34px!important;
+          max-width:34px!important;
+          padding:0!important;
+        }
+        .learn-options{
+          display:flex!important;
+          flex-direction:column!important;
+          gap:10px!important;
+          margin-top:18px!important;
+        }
+        .learn-option,.quiz-option,.excel-options .quiz-option{
+          width:100%!important;
+          max-width:100%!important;
+          min-width:0!important;
+          white-space:normal!important;
+          text-align:left!important;
+          overflow-wrap:anywhere!important;
+          word-break:break-word!important;
+          padding:13px 14px!important;
+        }
+        .learn-feedback{
+          margin-top:14px!important;
+          padding:14px!important;
+          overflow-x:hidden!important;
+        }
+        .ai-short-explain{padding:14px!important;overflow-x:hidden!important}
+        .ai-short-explain .ai-short-box{padding:12px!important;overflow-x:hidden!important}
+        img,svg,canvas,video,iframe{max-width:100%!important;height:auto}
+        table{max-width:100%!important}
+        .table-wrap{overflow-x:auto!important}
+        .hvq-fixed-topbar{
+          width:100vw!important;
+          max-width:100vw!important;
+          left:0!important;
+          right:0!important;
+          overflow:hidden!important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  window.addEventListener('resize',applyRootLock,{passive:true});
+  window.addEventListener('orientationchange',()=>setTimeout(()=>{applyViewport();applyRootLock();window.scrollTo(0,window.scrollY);},250),{passive:true});
+})();
