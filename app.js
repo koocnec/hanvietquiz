@@ -300,6 +300,21 @@ function ensureFixedTopbarStyle(){
     }
     #hvqQuickBackgroundButton:hover,
     .hvq-top-bg-button:hover{background:rgba(148,163,184,.14)}
+    
+    .hvq-fixed-topbar .page-header,
+    .hvq-fixed-topbar h1,
+    .hvq-fixed-topbar .page-header h1{position:static!important}
+    body.hvq-topbar-fixed #app,
+    body.hvq-topbar-fixed .app,
+    body.hvq-topbar-fixed main,
+    body.hvq-topbar-fixed .main-content,
+    body.hvq-topbar-fixed .workspace,
+    body.hvq-topbar-fixed .page{padding-top:0!important;margin-top:0!important}
+    body.hvq-topbar-fixed .sidebar,
+    body.hvq-topbar-fixed aside,
+    body.hvq-topbar-fixed #mainSidebar,
+    body.hvq-topbar-fixed #toolSidebar{padding-top:12px}
+
     #hvqQuickBackgroundButton .iconify{font-size:18px}
     #hvqQuickBackgroundPanel{
       position:fixed;
@@ -331,49 +346,60 @@ function findTopbarElement(){
   const topNav=document.querySelector("#topNav");
   const profile=document.querySelector("#profileButton");
   const search=document.querySelector("#searchButton");
-  const candidates=[
-    topNav?.closest("header"),
-    profile?.closest("header"),
-    search?.closest("header"),
-    document.querySelector("header"),
-    topNav?.parentElement?.parentElement,
-    topNav?.parentElement,
-    profile?.parentElement?.parentElement,
-    profile?.parentElement
-  ].filter(Boolean);
-  return candidates.find(el=>el&&el !== document.body&&el !== document.documentElement) || null;
+  const notification=document.querySelector("#notificationButton");
+
+  // Chỉ chọn thanh bar thật sự có #topNav / profile / search.
+  // Không được lấy header chung của trang, vì nó có thể là tiêu đề "Đã tạo".
+  const anchors=[topNav,profile,search,notification].filter(Boolean);
+  for(const anchor of anchors){
+    const candidates=[
+      anchor.closest(".topbar"),
+      anchor.closest(".app-header"),
+      anchor.closest(".header-bar"),
+      anchor.closest("header"),
+      anchor.parentElement?.parentElement,
+      anchor.parentElement
+    ].filter(Boolean);
+
+    for(const el of candidates){
+      if(!el || el===document.body || el===document.documentElement)continue;
+      const hasNav=!!el.querySelector?.("#topNav");
+      const hasRight=!!el.querySelector?.("#profileButton,#searchButton,#notificationButton");
+      const looksLikePageHeader=!!el.querySelector?.(".page-header") || /^Đã tạo|Trang chủ|Khóa học|Quiz/i.test((el.textContent||"").trim());
+      if((hasNav||hasRight) && !looksLikePageHeader)return el;
+    }
+  }
+  return null;
 }
+
 function ensureFixedTopbar(){
   ensureFixedTopbarStyle();
-  document.body.classList.add("hvq-topbar-fixed");
-  let topbar=document.querySelector(".hvq-fixed-topbar")||findTopbarElement();
-  if(topbar){
-    let placeholder=document.querySelector("#hvqTopbarPlaceholder");
-    if(!placeholder){
-      placeholder=document.createElement("div");
-      placeholder.id="hvqTopbarPlaceholder";
-      placeholder.style.height="var(--hvq-topbar-height)";
-      placeholder.style.width="100%";
-      placeholder.style.pointerEvents="none";
-    }
-    if(topbar.parentElement!==document.body){
-      topbar.parentElement?.insertBefore(placeholder,topbar);
-      document.body.insertBefore(topbar,document.body.firstChild);
-    }else if(!document.querySelector("#hvqTopbarPlaceholder")){
-      document.body.insertBefore(placeholder,topbar.nextSibling);
-    }
-    topbar.classList.add("hvq-fixed-topbar");
-    topbar.style.setProperty("display","flex","important");
-    topbar.style.setProperty("visibility","visible","important");
-    topbar.style.setProperty("opacity","1","important");
-    topbar.style.setProperty("position","fixed","important");
-    topbar.style.setProperty("top","0","important");
-    topbar.style.setProperty("left","0","important");
-    topbar.style.setProperty("right","0","important");
-    topbar.style.setProperty("z-index","2147483000","important");
+  const topbar=document.querySelector(".hvq-fixed-topbar")||findTopbarElement();
+
+  if(!topbar){
+    document.body.classList.remove("hvq-topbar-fixed");
+    ensureTopBackgroundButton(null);
+    return;
   }
+
+  document.body.classList.add("hvq-topbar-fixed");
+
+  // Không di chuyển page header nữa. Chỉ fixed đúng thanh bar có menu điều hướng.
+  topbar.classList.add("hvq-fixed-topbar");
+  topbar.style.setProperty("display","flex","important");
+  topbar.style.setProperty("align-items","center","important");
+  topbar.style.setProperty("visibility","visible","important");
+  topbar.style.setProperty("opacity","1","important");
+  topbar.style.setProperty("position","fixed","important");
+  topbar.style.setProperty("top","0","important");
+  topbar.style.setProperty("left","0","important");
+  topbar.style.setProperty("right","0","important");
+  topbar.style.setProperty("width","100%","important");
+  topbar.style.setProperty("z-index","2147483000","important");
+
   ensureTopBackgroundButton(topbar);
 }
+
 function ensureTopBackgroundButton(topbar=null){
   let btn=document.querySelector("#hvqQuickBackgroundButton");
   if(!btn){
