@@ -1,3 +1,4 @@
+// HVQ_PERSONAL_SCOPE_FIXED_V7 - dữ liệu cá nhân tách riêng theo Gmail, legacy chuyển về buivantoan1998@gmail.com
 const routes = {
   home:["Trang chủ","home"], courses:["Khoá học","book-open"], decks:["Bộ từ vựng","layers"],
   inputData:["Nhập liệu","table-properties"], quizExcel:["Quiz từ Excel","file-spreadsheet"], practice:["Luyện tập","pen-tool"], exam:["Luyện thi","file-check"], community:["Cộng đồng","users"],
@@ -46,6 +47,7 @@ const defaultLearnSettings={answerDefinition:true,answerTerm:false,starredOnly:f
 const defaultUser={name:"Khách",email:"",picture:"",sub:"",signedIn:false};
 const defaultBackground={mode:"preset",preset:"dotGrid",customUrl:"",opacity:1,overlay:0.08,blur:0};
 const defaultExcelQuiz={sourceUrl:"",pasteData:"",questions:[],index:0,score:0,answered:null,shuffle:true,autoAdvance:false,onlyWrong:false,onlyStarred:false,onlyUnmastered:false,pageFilter:"all",wrongIds:[],starredIds:[],correctIds:[],sourceName:"Chưa có dữ liệu"};
+const blankLearnSessionStats=()=>({correctIds:[],wrongMap:{},wrongOrder:[],mode:"normal"});
 const savedInputSheets={
   "NhapLieu":"https://docs.google.com/spreadsheets/d/188bSTqmXvvU55ht8yJt-wlIwfP3mLiOhebhEStcAwvw/edit?gid=881137373#gid=881137373",
   "trang 21-24":"https://docs.google.com/spreadsheets/d/188bSTqmXvvU55ht8yJt-wlIwfP3mLiOhebhEStcAwvw/edit?gid=418545698#gid=418545698",
@@ -57,7 +59,7 @@ const savedInputColumns={
   "ngu phap":{termCol:"D",meaningCol:"E",exampleCol:"F",synonymCol:"G",mergeRows:true}
 };
 const defaultInputData={sourceType:"sheet",sheetUrl:savedInputSheets.NhapLieu,savedSheet:"NhapLieu",termCol:"B",meaningCol:"A",exampleCol:"C",synonymCol:"",autoDetect:true,mergeRows:false,folderSize:50,lastFileName:"",selected:true,lastAppliedAt:"",lastResult:null};
-const defaultState={route:"home",streak:7,today:146,minutes:42,xp:2340,quizIndex:0,quizScore:0,quizAnswered:null,flashIndex:0,activeCreatedDeck:null,activeCreatedFolder:"",detailCardIndex:0,detailFlipped:false,detailMode:"flashcard",detailSearch:"",detailFilter:"all",detailSort:"original",detailProgress:{},detailStars:{},deckStudyStats:{},learnOrder:[],learnIndex:0,learnOptions:[],learnAnswered:null,learnCorrect:0,learnUnknown:0,learnCompleted:0,learnSettings:defaultLearnSettings,excelQuiz:defaultExcelQuiz,inputData:defaultInputData,theme:"dark",dailyGoal:30,notifications:true,background:defaultBackground,calendar:[2,4,6,8,10,12,14,16,18,20,22,24,26],favorites:[1,2],user:defaultUser,createdDecks:[],deckDraft:{title:"",description:"",isPublic:false,suggestions:true,cards:[blankDraftCard()]}};
+const defaultState={route:"home",streak:7,today:146,minutes:42,xp:2340,quizIndex:0,quizScore:0,quizAnswered:null,flashIndex:0,activeCreatedDeck:null,activeCreatedFolder:"",detailCardIndex:0,detailFlipped:false,detailMode:"flashcard",detailSearch:"",detailFilter:"all",detailSort:"original",detailProgress:{},detailStars:{},deckStudyStats:{},learnOrder:[],learnIndex:0,learnOptions:[],learnAnswered:null,learnCorrect:0,learnUnknown:0,learnCompleted:0,learnSessionStats:blankLearnSessionStats(),learnSettings:defaultLearnSettings,excelQuiz:defaultExcelQuiz,inputData:defaultInputData,theme:"dark",dailyGoal:30,notifications:true,background:defaultBackground,calendar:[2,4,6,8,10,12,14,16,18,20,22,24,26],favorites:[1,2],user:defaultUser,createdDecks:[],deckDraft:{title:"",description:"",isPublic:false,suggestions:true,cards:[blankDraftCard()]}};
 const googleClientId=document.querySelector('meta[name="google-signin-client_id"]')?.content?.trim()||"";
 const freshDefaultState=()=>JSON.parse(JSON.stringify(defaultState));
 const storedState=JSON.parse(localStorage.getItem("hvq-state")||"{}");
@@ -66,11 +68,92 @@ state.user={...defaultUser,...(state.user||{})};
 state.deckDraft={...defaultState.deckDraft,...(state.deckDraft||{})};
 state.deckDraft.cards=state.deckDraft.cards?.length?state.deckDraft.cards.map(card=>({...blankDraftCard(),...card})):[blankDraftCard()];
 state.learnSettings={...defaultLearnSettings,...(state.learnSettings||{})};
+state.learnSessionStats={...blankLearnSessionStats(),...(state.learnSessionStats||{})};
+state.learnSessionStats.wrongMap={...(state.learnSessionStats.wrongMap||{})};
+state.learnSessionStats.wrongOrder=Array.isArray(state.learnSessionStats.wrongOrder)?state.learnSessionStats.wrongOrder:[];
+state.learnSessionStats.correctIds=Array.isArray(state.learnSessionStats.correctIds)?state.learnSessionStats.correctIds:[];
 state.excelQuiz={...defaultExcelQuiz,...(state.excelQuiz||{})};
 state.inputData={...defaultInputData,...(state.inputData||{})};
 state.deckStudyStats={...(state.deckStudyStats||{})};
 state.background={...defaultBackground,...(state.background||{})};
 if(state.inputData.savedSheet==="NhapLieu")state.inputData.mergeRows=false;
+
+// ===== HVQ PERSONAL ACCOUNT SCOPE v7 =====
+// Mọi dữ liệu cá nhân của 3 tab Đã tạo / Nhập liệu / Quiz Excel được lưu theo từng Gmail.
+// Dữ liệu cũ trước đây được tự động chuyển vào Gmail chính dưới đây, không còn hiện ở Khách/Gmail khác.
+const HVQ_OWNER_EMAIL="buivantoan1998@gmail.com";
+const HVQ_PERSONAL_SCOPE_VERSION="v7";
+const HVQ_PERSONAL_FIELDS=[
+  "activeCreatedDeck","activeCreatedFolder","detailCardIndex","detailFlipped","detailMode","detailSearch","detailFilter","detailSort",
+  "detailProgress","detailStars","deckStudyStats","learnOrder","learnIndex","learnOptions","learnAnswered","learnCorrect","learnUnknown",
+  "learnCompleted","learnSessionStats","learnSettings","excelQuiz","inputData","deckDraft","editingDeckIndex","flashIndex"
+];
+function hvqClone(value){return JSON.parse(JSON.stringify(value))}
+function hvqSafeJson(raw,fallback={}){try{return raw?JSON.parse(raw):fallback}catch{return fallback}}
+function hvqNormalizedEmail(value=""){return String(value||"").trim().toLowerCase()}
+function hvqAccountKeyFromEmail(email){email=hvqNormalizedEmail(email);return email?`gmail:${email}`:"guest"}
+function hvqCurrentAccountKey(){return state.user?.signedIn?hvqAccountKeyFromEmail(state.user.email):"guest"}
+function hvqOwnerAccountKey(){return hvqAccountKeyFromEmail(HVQ_OWNER_EMAIL)}
+function hvqPersonalStateKey(accountKey=hvqCurrentAccountKey()){return `hvq-personal-state::${accountKey}`}
+function hvqPersonalDecksKey(accountKey=hvqCurrentAccountKey()){return `createdDecks::${accountKey}`}
+function hvqBlankPersonalState(){return {
+  activeCreatedDeck:null,activeCreatedFolder:"",detailCardIndex:0,detailFlipped:false,detailMode:"flashcard",detailSearch:"",detailFilter:"all",detailSort:"original",
+  detailProgress:{},detailStars:{},deckStudyStats:{},learnOrder:[],learnIndex:0,learnOptions:[],learnAnswered:null,learnCorrect:0,learnUnknown:0,
+  learnCompleted:0,learnSessionStats:blankLearnSessionStats(),learnSettings:hvqClone(defaultLearnSettings),excelQuiz:hvqClone(defaultExcelQuiz),
+  inputData:hvqClone(defaultInputData),deckDraft:hvqClone(defaultState.deckDraft),editingDeckIndex:null,flashIndex:0
+}}
+function hvqNormalizePersonalState(personal={}){
+  const next={...hvqBlankPersonalState(),...(personal||{})};
+  next.learnSettings={...defaultLearnSettings,...(next.learnSettings||{})};
+  next.learnSessionStats={...blankLearnSessionStats(),...(next.learnSessionStats||{})};
+  next.learnSessionStats.wrongMap={...(next.learnSessionStats.wrongMap||{})};
+  next.learnSessionStats.wrongOrder=Array.isArray(next.learnSessionStats.wrongOrder)?next.learnSessionStats.wrongOrder:[];
+  next.learnSessionStats.correctIds=Array.isArray(next.learnSessionStats.correctIds)?next.learnSessionStats.correctIds:[];
+  next.excelQuiz={...defaultExcelQuiz,...(next.excelQuiz||{})};
+  next.inputData={...defaultInputData,...(next.inputData||{})};
+  if(next.inputData.savedSheet==="NhapLieu")next.inputData.mergeRows=false;
+  next.deckDraft={...hvqClone(defaultState.deckDraft),...(next.deckDraft||{})};
+  next.deckDraft.cards=next.deckDraft.cards?.length?next.deckDraft.cards.map(card=>({...blankDraftCard(),...card})):[blankDraftCard()];
+  next.detailProgress={...(next.detailProgress||{})};
+  next.detailStars={...(next.detailStars||{})};
+  next.deckStudyStats={...(next.deckStudyStats||{})};
+  next.learnOrder=Array.isArray(next.learnOrder)?next.learnOrder:[];
+  next.learnOptions=Array.isArray(next.learnOptions)?next.learnOptions:[];
+  return next;
+}
+function hvqApplyPersonalState(personal={}){const next=hvqNormalizePersonalState(personal);HVQ_PERSONAL_FIELDS.forEach(k=>state[k]=next[k])}
+function hvqCollectPersonalStateFrom(source=state){const out={};HVQ_PERSONAL_FIELDS.forEach(k=>{if(k in source)out[k]=source[k]});return hvqNormalizePersonalState(out)}
+function hvqLightStateWithoutPersonal(){const copy={...state};delete copy.createdDecks;HVQ_PERSONAL_FIELDS.forEach(k=>delete copy[k]);return copy}
+async function hvqMigrateLegacyPersonalDataToOwner(){
+  const flag=`hvq-personal-migrated-owner-${HVQ_PERSONAL_SCOPE_VERSION}`;
+  if(localStorage.getItem(flag)==="1")return;
+  const ownerKey=hvqOwnerAccountKey();
+  const ownerStateKey=hvqPersonalStateKey(ownerKey);
+  if(!localStorage.getItem(ownerStateKey)){
+    const legacyPersonal=hvqCollectPersonalStateFrom(storedState||{});
+    localStorage.setItem(ownerStateKey,JSON.stringify(legacyPersonal));
+  }
+  try{
+    const legacyDecks=await idbGet("createdDecks");
+    const ownerDecks=await idbGet(hvqPersonalDecksKey(ownerKey));
+    if(Array.isArray(legacyDecks)&&legacyDecks.length&&!(Array.isArray(ownerDecks)&&ownerDecks.length)){
+      await idbSet(hvqPersonalDecksKey(ownerKey),legacyDecks);
+    }
+  }catch{}
+  localStorage.setItem(flag,"1");
+}
+async function hvqLoadCurrentAccountPersonalData(){
+  const accountKey=hvqCurrentAccountKey();
+  const personal=hvqSafeJson(localStorage.getItem(hvqPersonalStateKey(accountKey)),{});
+  hvqApplyPersonalState(personal);
+  try{const decks=await idbGet(hvqPersonalDecksKey(accountKey));state.createdDecks=Array.isArray(decks)?decks:[]}catch{state.createdDecks=[]}
+  if(!Array.isArray(state.createdDecks))state.createdDecks=[];
+}
+function hvqSaveCurrentAccountPersonalData(){
+  const accountKey=hvqCurrentAccountKey();
+  try{localStorage.setItem(hvqPersonalStateKey(accountKey),JSON.stringify(hvqCollectPersonalStateFrom(state)))}catch{}
+  persistCreatedDecks();
+}
 const app=document.querySelector("#app");
 
 const BACKGROUND_PRESETS={dotGrid:"assets/bg-dot-grid.png"};
@@ -177,10 +260,10 @@ function deckDb(){return new Promise((resolve,reject)=>{if(!window.indexedDB){re
 async function idbGet(key){const db=await deckDb();if(!db)return null;return new Promise((resolve,reject)=>{const tx=db.transaction("kv","readonly"),req=tx.objectStore("kv").get(key);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 async function idbSet(key,value){const db=await deckDb();if(!db)return;return new Promise((resolve,reject)=>{const tx=db.transaction("kv","readwrite"),req=tx.objectStore("kv").put(value,key);req.onsuccess=()=>resolve();req.onerror=()=>reject(req.error)})}
 async function idbDelete(key){const db=await deckDb();if(!db)return;return new Promise((resolve,reject)=>{const tx=db.transaction("kv","readwrite"),req=tx.objectStore("kv").delete(key);req.onsuccess=()=>resolve();req.onerror=()=>reject(req.error)})}
-function lightState(){const copy={...state};delete copy.createdDecks;return copy}
-function persistCreatedDecks(){idbSet("createdDecks",state.createdDecks||[]).catch(()=>showToast("Không lưu được bộ thẻ lớn","circle-alert"))}
-async function loadCreatedDecks(){try{const decks=await idbGet("createdDecks");if(Array.isArray(decks))state.createdDecks=decks;else if(Array.isArray(storedState.createdDecks)&&storedState.createdDecks.length){state.createdDecks=storedState.createdDecks;persistCreatedDecks();save()}}catch{}}
-function save(){try{localStorage.setItem("hvq-state",JSON.stringify(lightState()))}catch{showToast("Bộ thẻ lớn đã được lưu ngoài localStorage","database")}persistCreatedDecks()}
+function lightState(){return hvqLightStateWithoutPersonal()}
+function persistCreatedDecks(){idbSet(hvqPersonalDecksKey(),state.createdDecks||[]).catch(()=>showToast("Không lưu được bộ thẻ lớn","circle-alert"))}
+async function loadCreatedDecks(){await hvqLoadCurrentAccountPersonalData()}
+function save(){try{localStorage.setItem("hvq-state",JSON.stringify(lightState()));hvqSaveCurrentAccountPersonalData()}catch{showToast("Bộ thẻ lớn đã được lưu ngoài localStorage","database")}}
 function escapeHtml(value=""){return String(value).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]))}
 function escapeAttr(value=""){return escapeHtml(value)}
 function escapeRegExp(value=""){return String(value).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}
@@ -241,9 +324,9 @@ function initials(name="Khách"){return name.trim().split(/\s+/).map(x=>x[0]).jo
 function userAvatar(user=currentUser()){return user.picture?`<img class="avatar avatar-image" src="${escapeAttr(user.picture)}" alt="${escapeAttr(user.name)}">`:`<span class="avatar">${initials(user.name)}</span>`}
 function isGoogleConfigured(){return googleClientId&&googleClientId.includes(".apps.googleusercontent.com")&&!googleClientId.startsWith("PASTE_")}
 function parseJwt(token){try{let payload=token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/");payload+=Array((4-payload.length%4)%4+1).join("=");return JSON.parse(decodeURIComponent(atob(payload).split("").map(c=>`%${("00"+c.charCodeAt(0).toString(16)).slice(-2)}`).join("")))}catch{return null}}
-function handleGoogleCredential(response){const profile=parseJwt(response.credential);if(!profile){showToast("Không đọc được phản hồi từ Google","circle-alert");return}state.user={name:profile.name||profile.given_name||"Người dùng Google",email:profile.email||"",picture:profile.picture||"",sub:profile.sub||"",signedIn:true};save();closeModal();render();showToast(`Xin chào ${state.user.name}`)}
+async function handleGoogleCredential(response){const profile=parseJwt(response.credential);if(!profile){showToast("Không đọc được phản hồi từ Google","circle-alert");return}state.user={name:profile.name||profile.given_name||"Người dùng Google",email:profile.email||"",picture:profile.picture||"",sub:profile.sub||"",signedIn:true};await hvqLoadCurrentAccountPersonalData();save();closeModal();render();showToast(`Xin chào ${state.user.name}`)}
 function openLoginModal(){modal("Đăng nhập",`<div class="login-panel"><div class="login-icon">${icon("user-round-check")}</div><h3>Đăng nhập HanVietQuiz</h3><p class="muted text-sm">Dùng tài khoản Google để hiển thị hồ sơ và lưu phiên học trên trình duyệt này.</p><div id="googleSignInButton" class="google-signin-slot"></div>${isGoogleConfigured()?"":`<p class="auth-note">${icon("circle-alert")} Chưa có Google Client ID. Hãy thay giá trị meta <strong>google-signin-client_id</strong> trong index.html.</p>`}</div>`);renderGoogleButton()}
-function signOut(){if(window.google?.accounts?.id)google.accounts.id.disableAutoSelect();state.user={...defaultUser};save();render();showToast("Đã đăng xuất")}
+async function signOut(){if(window.google?.accounts?.id)google.accounts.id.disableAutoSelect();state.user={...defaultUser};await hvqLoadCurrentAccountPersonalData();save();render();showToast("Đã đăng xuất")}
 function renderUserUi(){const user=currentUser();const buttonEl=document.querySelector("#profileButton");buttonEl.innerHTML=`${userAvatar(user)}<span class="hidden sm:inline">${escapeHtml(user.name)}</span>`;document.querySelector("#profileMenu").innerHTML=user.signedIn?`<div class="profile-summary">${userAvatar(user)}<div><strong>${escapeHtml(user.name)}</strong><small>${escapeHtml(user.email||"Đã đăng nhập Google")}</small></div></div><button class="dropdown-item" data-route="settings">Hồ sơ & cài đặt</button><button class="dropdown-item" data-action="upgrade">Nâng cấp Pro</button><button class="dropdown-item text-red-400" data-action="sign-out">Đăng xuất</button>`:`<div class="profile-summary"><span class="avatar">HV</span><div><strong>Khách</strong><small>Đăng nhập để cá nhân hóa hồ sơ</small></div></div><button class="dropdown-item" data-action="sign-in-google">${icon("log-in")} Đăng nhập Google</button><button class="dropdown-item" data-route="settings">Cài đặt</button>`}
 function ensureFixedTopbarStyle(){
   if(document.querySelector("#hvqFixedTopbarStyle"))return;
@@ -1259,7 +1342,85 @@ function excelAiExplanationHtml(q,selectedIndex){
 }
 
 
-function learnSessionPage(){const deck=state.createdDecks[state.activeCreatedDeck];if(!deck){state.route="decks";return decksPage()}if(!state.learnOrder.length)return `<div class="learn-session"><div class="learn-topbar"><button class="learn-exit" data-action="exit-learn">${icon("arrow-left")} Thoát</button><button class="button small" data-action="learn-settings">${icon("settings")} Cài đặt</button></div><section class="card learn-finished"><h1>Không có thẻ phù hợp</h1><p class="muted">Hãy thay đổi bộ lọc trong Cài đặt học tập.</p></section></div>`;if(state.learnCompleted>=state.learnOrder.length)return `<div class="learn-session"><div class="learn-topbar"><button class="learn-exit" data-action="exit-learn">${icon("arrow-left")} Thoát</button></div><section class="card learn-finished"><strong>${state.learnCorrect}/${state.learnOrder.length}</strong><h1>Hoàn thành phiên học!</h1><p class="muted">Bạn đã trả lời đúng ${state.learnCorrect} câu và chọn “Tôi không biết” ${state.learnUnknown} câu.</p><div class="flex justify-center gap-2 mt-6"><button class="button" data-action="exit-learn">Về bộ thẻ</button><button class="button primary" data-action="restart-learn">Học lại</button></div></section></div>`;
+function learnStatKey(cardIndex){return String(cardIndex)}
+function ensureLearnSessionStats(){
+  if(!state.learnSessionStats)state.learnSessionStats=blankLearnSessionStats();
+  state.learnSessionStats.correctIds=Array.isArray(state.learnSessionStats.correctIds)?state.learnSessionStats.correctIds:[];
+  state.learnSessionStats.wrongMap=state.learnSessionStats.wrongMap||{};
+  state.learnSessionStats.wrongOrder=Array.isArray(state.learnSessionStats.wrongOrder)?state.learnSessionStats.wrongOrder:[];
+  return state.learnSessionStats;
+}
+function recordLearnResult(cardIndex,correct){
+  const stats=ensureLearnSessionStats(),key=learnStatKey(cardIndex),deck=state.createdDecks?.[state.activeCreatedDeck],card=deck?.cards?.[cardIndex]||{};
+  if(correct){
+    if(!stats.correctIds.includes(key))stats.correctIds.push(key);
+    return;
+  }
+  if(!stats.wrongMap[key]){
+    stats.wrongMap[key]={cardIndex,wrongCount:0,term:card.term||"",definition:card.definition||"",synonyms:card.synonyms||"",example:card.example||""};
+  }
+  stats.wrongMap[key].wrongCount=(Number(stats.wrongMap[key].wrongCount)||0)+1;
+  stats.wrongMap[key].term=card.term||stats.wrongMap[key].term||"";
+  stats.wrongMap[key].definition=card.definition||stats.wrongMap[key].definition||"";
+  stats.wrongMap[key].synonyms=card.synonyms||stats.wrongMap[key].synonyms||"";
+  if(!stats.wrongOrder.includes(key))stats.wrongOrder.push(key);
+}
+function learnWrongItems(){
+  const stats=ensureLearnSessionStats(),map=stats.wrongMap||{};
+  const keys=(stats.wrongOrder||[]).filter(key=>map[key]);
+  Object.keys(map).forEach(key=>{if(!keys.includes(key))keys.push(key)});
+  return keys.map(key=>({...map[key],key,cardIndex:Number(map[key].cardIndex)})).filter(item=>Number.isInteger(item.cardIndex));
+}
+function learnSummaryStarButton(cardIndex){
+  const starred=isDetailStarred(cardIndex);
+  return `<button class="learn-summary-star ${starred?"starred":""}" data-learn-summary-star="${cardIndex}" title="${starred?"Bỏ sao":"Gắn sao"}">${starred?"★":"☆"}</button>`;
+}
+function learnSessionSummaryHtml(deck){
+  const wrongItems=learnWrongItems();
+  const wrongCount=wrongItems.length;
+  const correctCount=Math.max(0,Number(state.learnCorrect)||0);
+  const unknownCount=Math.max(0,Number(state.learnUnknown)||0);
+  const grouped={};
+  wrongItems.forEach(item=>{const level=Math.max(1,Number(item.wrongCount)||1);if(!grouped[level])grouped[level]=[];grouped[level].push(item)});
+  const levels=Object.keys(grouped).map(Number).sort((a,b)=>a-b);
+  let html=`<div class="learn-summary-panel">
+    <h2>Tổng kết phiên học</h2>
+    <div class="learn-summary-grid">
+      <div class="learn-summary-stat correct"><strong>${correctCount}</strong><span>Số từ đúng</span></div>
+      <div class="learn-summary-stat wrong"><strong>${wrongCount}</strong><span>Số từ sai</span></div>
+      <div class="learn-summary-stat unknown"><strong>${unknownCount}</strong><span>Tôi không biết</span></div>
+    </div>`;
+  if(!wrongItems.length){
+    html+=`<div class="learn-summary-perfect">Tuyệt vời! Bạn không sai từ nào trong phiên này.</div>`;
+  }else{
+    levels.forEach(level=>{
+      html+=`<div class="learn-wrong-group"><div class="learn-wrong-group-head"><strong>Sai ${level} lần</strong><button class="button small" data-star-wrong-level="${level}">Gắn sao nhóm này</button></div>`;
+      grouped[level].forEach(item=>{
+        const card=deck?.cards?.[item.cardIndex]||item;
+        const meaning=card.definition||primarySynonym(card)||card.synonyms||"Chưa có nghĩa";
+        html+=`<div class="learn-wrong-row"><div><strong>${escapeHtml(card.term||item.term||"—")}</strong><span>${escapeHtml(shortText(meaning,110))}</span></div>${learnSummaryStarButton(item.cardIndex)}</div>`;
+      });
+      html+=`</div>`;
+    });
+    html+=`<div class="learn-summary-actions"><button class="button" data-action="learn-wrong-again">Học lại từ sai</button><button class="button primary" data-action="star-all-wrong">Gắn sao tất cả từ sai</button></div>`;
+  }
+  html+=`</div>`;
+  return html;
+}
+function starWrongCards(level=null){
+  const wrongItems=learnWrongItems().filter(item=>level===null||(Number(item.wrongCount)||1)===Number(level));
+  if(!wrongItems.length){showToast("Không có từ sai để gắn sao","circle-alert");return}
+  wrongItems.forEach(item=>{state.detailStars[`${state.activeCreatedDeck}:${item.cardIndex}`]=true});
+  save();render();showToast(level===null?"Đã gắn sao tất cả từ sai":`Đã gắn sao nhóm sai ${level} lần`);
+}
+function startWrongLearnSession(){
+  const deck=state.createdDecks[state.activeCreatedDeck];
+  const order=learnWrongItems().map(item=>item.cardIndex).filter(i=>deck?.cards?.[i]);
+  if(!order.length){showToast("Không có từ sai để học lại","circle-alert");return}
+  startLearnSession({order,mode:"wrong"});
+}
+
+function learnSessionPage(){const deck=state.createdDecks[state.activeCreatedDeck];if(!deck){state.route="decks";return decksPage()}if(!state.learnOrder.length)return `<div class="learn-session"><div class="learn-topbar"><button class="learn-exit" data-action="exit-learn">${icon("arrow-left")} Thoát</button><button class="button small" data-action="learn-settings">${icon("settings")} Cài đặt</button></div><section class="card learn-finished"><h1>Không có thẻ phù hợp</h1><p class="muted">Hãy thay đổi bộ lọc trong Cài đặt học tập.</p></section></div>`;if(state.learnCompleted>=state.learnOrder.length)return `<div class="learn-session"><div class="learn-topbar"><button class="learn-exit" data-action="exit-learn">${icon("arrow-left")} Thoát</button></div><section class="card learn-finished"><strong>${state.learnCorrect}/${state.learnOrder.length}</strong><h1>Hoàn thành phiên học!</h1><p class="muted">Bạn đã trả lời đúng ${state.learnCorrect} câu và chọn “Tôi không biết” ${state.learnUnknown} câu.</p>${learnSessionSummaryHtml(deck)}<div class="flex justify-center gap-2 mt-6 flex-wrap"><button class="button" data-action="exit-learn">Về bộ thẻ</button><button class="button primary" data-action="restart-learn">Học lại toàn bộ</button></div></section></div>`;
   const cardIndex=state.learnOrder[state.learnIndex],card=deck.cards[cardIndex],options=state.learnOptions,showExample=!!state.learnSettings.showExample,exampleText=cleanInputText(card.example||card.pronunciation||card.wordType||"");
   return `<div class="learn-session"><div class="learn-topbar"><button class="learn-exit" data-action="exit-learn">${icon("arrow-left")} Thoát</button><button class="button small" data-action="learn-settings">${icon("settings")} Cài đặt</button></div>
   <div class="learn-progress">${state.learnOrder.map((_,i)=>`<i class="learn-progress-segment ${i<state.learnCompleted?"done":i===state.learnIndex?"current":""}"></i>`).join("")}<small class="text-indigo-300">+${Math.max(0,state.learnOrder.length-state.learnCompleted)}</small></div>
@@ -1503,8 +1664,31 @@ function settingsPage(){
   </section>`
 }
 
+function ensureLearnSummaryStyle(){
+  if(document.querySelector("#hvqLearnSummaryStyle"))return;
+  const style=document.createElement("style");
+  style.id="hvqLearnSummaryStyle";
+  style.textContent=`
+    .learn-summary-panel{width:min(780px,100%);margin:24px auto 0;padding:20px;border-radius:22px;background:rgba(15,23,42,.42);border:1px solid rgba(148,163,184,.18);text-align:left}
+    .learn-summary-panel h2{text-align:center;font-size:22px;margin:0 0 16px;color:#f8fafc}
+    .learn-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px}
+    .learn-summary-stat{padding:16px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);text-align:center}
+    .learn-summary-stat strong{display:block;font-size:34px;line-height:1;font-weight:900}
+    .learn-summary-stat span{display:block;margin-top:8px;color:#cbd5e1;font-size:13px;font-weight:700}
+    .learn-summary-stat.correct strong{color:#34d399}.learn-summary-stat.wrong strong{color:#fb7185}.learn-summary-stat.unknown strong{color:#fbbf24}
+    .learn-summary-perfect{text-align:center;color:#34d399;font-weight:800;padding:16px;border-radius:16px;background:rgba(52,211,153,.1)}
+    .learn-wrong-group{margin-top:16px}.learn-wrong-group-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.learn-wrong-group-head strong{font-size:18px;color:#f8fafc}
+    .learn-wrong-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px;margin-bottom:8px;border-radius:16px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.08)}
+    .learn-wrong-row div{min-width:0}.learn-wrong-row strong{display:block;color:#fff;font-size:17px}.learn-wrong-row span{display:block;color:#cbd5e1;font-size:13px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:560px}
+    .learn-summary-star{border:0;background:transparent;color:#fbbf24;font-size:34px;line-height:1;cursor:pointer;min-width:44px;min-height:44px;border-radius:12px}.learn-summary-star:hover{background:rgba(251,191,36,.12)}.learn-summary-star.starred{color:#facc15}
+    .learn-summary-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:20px}
+    @media(max-width:640px){.learn-summary-grid{grid-template-columns:1fr}.learn-wrong-row span{max-width:240px}.learn-wrong-group-head{align-items:flex-start;flex-direction:column}}
+  `;
+  document.head.appendChild(style);
+}
+
 const pageRenderers={home:homePage,courses:coursesPage,decks:decksPage,inputData:inputDataPage,createDeck:createDeckPage,deckDetail:deckDetailPage,learnSession:learnSessionPage,quizExcel:quizExcelPage,practice:practicePage,exam:examPage,community:communityPage,stats:statsPage,calendar:calendarPage,leaderboard:leaderboardPage,settings:settingsPage};
-function render(){rememberNavigation();applyBackgroundStyle();document.body.classList.toggle("learn-mode",state.route==="learnSession");renderNav();renderUserUi();app.innerHTML=(pageRenderers[state.route]||homePage)();ensureFixedTopbar();applyCustomLogo();setTimeout(()=>{ensureFixedTopbar();applyCustomLogo()},0);window.scrollTo({top:0});}
+function render(){rememberNavigation();applyBackgroundStyle();ensureLearnSummaryStyle();document.body.classList.toggle("learn-mode",state.route==="learnSession");renderNav();renderUserUi();app.innerHTML=(pageRenderers[state.route]||homePage)();ensureFixedTopbar();applyCustomLogo();setTimeout(()=>{ensureFixedTopbar();applyCustomLogo()},0);window.scrollTo({top:0});}
 
 document.addEventListener("click",e=>{
   const route=e.target.closest("[data-route]")?.dataset.route;if(route){routeTo(route);return}
@@ -1547,7 +1731,7 @@ document.addEventListener("click",e=>{
     if(action==="new-post"){simpleForm("Đăng bài cộng đồng","Tiêu đề bài viết",true);return}
     if(action==="add-schedule"){simpleForm("Thêm lịch học","Nội dung nhắc học");return}
     if(action==="upgrade"){modal("Nâng cấp Pro","<p class='muted'>Đây là bản demo. Bạn có thể kết nối cổng thanh toán ở bước tiếp theo.</p>");return}
-    if(action==="reset-data"){localStorage.removeItem("hvq-state");idbDelete("createdDecks");state=freshDefaultState();render();showToast("Đã đặt lại dữ liệu");return}
+    if(action==="reset-data"){const accountKey=hvqCurrentAccountKey();localStorage.removeItem(hvqPersonalStateKey(accountKey));idbDelete(hvqPersonalDecksKey(accountKey));localStorage.removeItem("hvq-state");state=freshDefaultState();state.createdDecks=[];save();render();showToast("Đã đặt lại dữ liệu tài khoản hiện tại");return}
     if(action==="export-stats"){const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="hanvietquiz-stats.json";a.click();URL.revokeObjectURL(a.href);showToast("Đã xuất báo cáo");return}
     if(action==="input-pick-file"){pickInputFile();return}
     if(action==="input-apply"){applyInputDataSettings();return}
@@ -1566,10 +1750,12 @@ document.addEventListener("click",e=>{
     if(action==="start-detail-mode"){showToast("Chế độ học đã sẵn sàng","play");return}
     if(action==="exit-learn"){state.route="deckDetail";state.detailMode="flashcard";state.learnAnswered=null;save();render();return}
     if(action==="restart-learn"){startLearnSession();return}
+    if(action==="learn-wrong-again"){startWrongLearnSession();return}
+    if(action==="star-all-wrong"){starWrongCards();return}
     if(action==="learn-settings"){openLearnSettings();return}
     if(action==="toggle-learn-example"){state.learnSettings.showExample=!state.learnSettings.showExample;save();render();return}
     if(action==="edit-learn-card"){state.deckDraft=JSON.parse(JSON.stringify(state.createdDecks[state.activeCreatedDeck]));state.editingDeckIndex=state.activeCreatedDeck;state.route="createDeck";save();render();return}
-    if(action==="learn-unknown"){state.learnAnswered="unknown";state.learnUnknown++;save();render();return}
+    if(action==="learn-unknown"){const cardIndex=state.learnOrder[state.learnIndex];state.learnAnswered="unknown";state.learnUnknown++;recordLearnResult(cardIndex,false);save();render();return}
     if(action==="next-learn"){advanceLearnSession();return}
     if(action==="apply-learn-settings"){applyLearnSettings();return}
     if(action==="reset-learn-progress"){resetLearnProgress();return}
@@ -1592,8 +1778,10 @@ document.addEventListener("click",e=>{
   const setStatus=e.target.closest("[data-set-status]")?.dataset.setStatus;if(setStatus){const card=detailCards(state.createdDecks[state.activeCreatedDeck])[state.detailCardIndex];if(!card)return;state.detailProgress[`${state.activeCreatedDeck}:${card.originalIndex}`]=setStatus;touchDeckStudyStats(state.activeCreatedDeck,{increment:false});if(setStatus==="mastered"){state.xp+=10;state.today+=1}save();render();showToast(setStatus==="mastered"?"Đã thành thạo +10 XP":"Đã cập nhật tiến độ");return}
   const detailStar=e.target.closest("[data-detail-star]")?.dataset.detailStar;if(detailStar!==undefined){const key=`${state.activeCreatedDeck}:${detailStar}`;state.detailStars[key]=!state.detailStars[key];save();render();showToast(state.detailStars[key]?"Đã đánh dấu sao":"Đã bỏ dấu sao");return}
   const learnStar=e.target.closest("[data-learn-star]")?.dataset.learnStar;if(learnStar!==undefined){const key=`${state.activeCreatedDeck}:${learnStar}`;state.detailStars[key]=!state.detailStars[key];save();render();return}
+  const learnSummaryStar=e.target.closest("[data-learn-summary-star]")?.dataset.learnSummaryStar;if(learnSummaryStar!==undefined){const key=`${state.activeCreatedDeck}:${learnSummaryStar}`;state.detailStars[key]=!state.detailStars[key];save();render();showToast(state.detailStars[key]?"Đã gắn sao":"Đã bỏ sao");return}
+  const starWrongLevel=e.target.closest("[data-star-wrong-level]")?.dataset.starWrongLevel;if(starWrongLevel!==undefined){starWrongCards(Number(starWrongLevel));return}
   const excelStar=e.target.closest("[data-excel-star]")?.dataset.excelStar;if(excelStar!==undefined){toggleExcelStar(excelStar);return}
-  const learnAnswer=e.target.closest("[data-learn-answer]")?.dataset.learnAnswer;if(learnAnswer!==undefined&&state.learnAnswered===null){state.learnAnswered=Number(learnAnswer);const cardIndex=state.learnOrder[state.learnIndex],correct=learnOptionIsCorrect(state.learnOptions[state.learnAnswered],cardIndex);if(correct){state.learnCorrect++;state.xp+=10;state.today++}save();render();if(correct&&state.learnSettings.autoAdvance)setTimeout(()=>{if(state.route==="learnSession"&&state.learnAnswered!==null)advanceLearnSession()},700);return}
+  const learnAnswer=e.target.closest("[data-learn-answer]")?.dataset.learnAnswer;if(learnAnswer!==undefined&&state.learnAnswered===null){state.learnAnswered=Number(learnAnswer);const cardIndex=state.learnOrder[state.learnIndex],correct=learnOptionIsCorrect(state.learnOptions[state.learnAnswered],cardIndex);recordLearnResult(cardIndex,correct);if(correct){state.learnCorrect++;state.xp+=10;state.today++}save();render();if(correct&&state.learnSettings.autoAdvance)setTimeout(()=>{if(state.route==="learnSession"&&state.learnAnswered!==null)advanceLearnSession()},700);return}
   const jumpCard=e.target.closest("[data-jump-card]")?.dataset.jumpCard;if(jumpCard!==undefined&&!e.target.closest("button")){const cards=detailCards(state.createdDecks[state.activeCreatedDeck]);state.detailCardIndex=Math.max(0,cards.findIndex(c=>c.originalIndex===Number(jumpCard)));state.detailFlipped=false;save();render();window.scrollTo({top:0,behavior:"smooth"});return}
   if(e.target.closest("#detailFlashcard")&&!e.target.closest("button")){state.detailFlipped=!state.detailFlipped;save();render();return}
   const courseFilter=e.target.closest("[data-filter-course]")?.dataset.filterCourse;if(courseFilter!==undefined){document.querySelectorAll("[data-filter-course]").forEach(x=>x.classList.toggle("active",x.dataset.filterCourse===courseFilter));document.querySelector("#courseResults").innerHTML=courseFilter==="2"?'<p class="empty card">Bạn chưa hoàn thành khóa học nào.</p>':courseRows();return}
@@ -1620,7 +1808,7 @@ document.addEventListener("input",e=>{if(e.target.matches("[data-background-fiel
 document.addEventListener("change",e=>{if(e.target.matches("[data-background-field]")){const key=e.target.dataset.backgroundField;state.background={...defaultBackground,...(state.background||{}),[key]:["opacity","overlay","blur"].includes(key)?Number(e.target.value):e.target.value};save();applyBackgroundStyle();render();return}if(e.target.id==="deckSort")filterDecks();if(e.target.id==="createdDeckSort"||e.target.id==="createdDeckSizeFilter")filterCreatedDecks();if(e.target.id==="createdFolderSort")filterCreatedFolders();if(e.target.id==="detailSort"){state.detailSort=e.target.value;state.detailCardIndex=0;state.detailFlipped=false;save();render()}if(e.target.id==="detailFilter"){state.detailFilter=e.target.value;state.detailCardIndex=0;state.detailFlipped=false;save();render()}if(e.target.matches("[data-excel-setting]")){state.excelQuiz[e.target.dataset.excelSetting]=e.target.checked;restartExcelQuiz()}if(e.target.matches("[data-excel-select]")){state.excelQuiz[e.target.dataset.excelSelect]=e.target.value;restartExcelQuiz()}if(e.target.matches("[data-input-field]")){const key=e.target.dataset.inputField;state.inputData[key]=e.target.type==="checkbox"?e.target.checked:e.target.value;if(key==="savedSheet"){state.inputData.sheetUrl=savedInputSheets[e.target.value]||state.inputData.sheetUrl;state.inputData={...state.inputData,...(savedInputColumns[e.target.value]||{})}}save();render()}});
 document.addEventListener("submit",e=>{e.preventDefault();if(e.target.id==="settingsForm"){const fd=new FormData(e.target);if(!state.user?.signedIn)state.user={...state.user,name:fd.get("name")||"Khách"};state.dailyGoal=Number(fd.get("dailyGoal"));state.theme=fd.get("theme")||state.theme;state.notifications=fd.get("notifications")==="true";save();applyBackgroundStyle();render();showToast("Đã lưu cài đặt")}else if(e.target.id==="fillBlankForm"){checkFillBlank()}else{closeModal();showToast("Đã lưu thành công")}});
 document.addEventListener("keydown",e=>{if(state.route!=="deckDetail"||state.detailMode!=="flashcard"||["INPUT","TEXTAREA","SELECT"].includes(document.activeElement.tagName))return;const n=detailCards(state.createdDecks[state.activeCreatedDeck]).length;if(!n)return;if([" ","Enter"].includes(e.key)){e.preventDefault();state.detailFlipped=!state.detailFlipped}else if(e.key==="ArrowLeft"){state.detailCardIndex=(state.detailCardIndex-1+n)%n;state.detailFlipped=false}else if(e.key==="ArrowRight"){state.detailCardIndex=(state.detailCardIndex+1)%n;state.detailFlipped=false}else return;save();render()});
-document.addEventListener("keydown",e=>{if(state.route!=="learnSession"||["INPUT","TEXTAREA","SELECT"].includes(document.activeElement.tagName))return;if(state.learnAnswered===null&&!state.learnSettings.fillBlank&&["1","2","3","4"].includes(e.key)){const answer=Number(e.key)-1;if(state.learnOptions[answer]){state.learnAnswered=answer;const cardIndex=state.learnOrder[state.learnIndex],correct=learnOptionIsCorrect(state.learnOptions[answer],cardIndex);if(correct){state.learnCorrect++;state.xp+=10;state.today++}save();render();if(correct&&state.learnSettings.autoAdvance)setTimeout(()=>{if(state.route==="learnSession"&&state.learnAnswered!==null)advanceLearnSession()},700)}}else if(state.learnAnswered===null&&e.key==="5"){state.learnAnswered="unknown";state.learnUnknown++;save();render()}else if(state.learnAnswered!==null&&e.key==="Enter"){advanceLearnSession()}});
+document.addEventListener("keydown",e=>{if(state.route!=="learnSession"||["INPUT","TEXTAREA","SELECT"].includes(document.activeElement.tagName))return;if(state.learnAnswered===null&&!state.learnSettings.fillBlank&&["1","2","3","4"].includes(e.key)){const answer=Number(e.key)-1;if(state.learnOptions[answer]){state.learnAnswered=answer;const cardIndex=state.learnOrder[state.learnIndex],correct=learnOptionIsCorrect(state.learnOptions[answer],cardIndex);recordLearnResult(cardIndex,correct);if(correct){state.learnCorrect++;state.xp+=10;state.today++}save();render();if(correct&&state.learnSettings.autoAdvance)setTimeout(()=>{if(state.route==="learnSession"&&state.learnAnswered!==null)advanceLearnSession()},700)}}else if(state.learnAnswered===null&&e.key==="5"){const cardIndex=state.learnOrder[state.learnIndex];state.learnAnswered="unknown";state.learnUnknown++;recordLearnResult(cardIndex,false);save();render()}else if(state.learnAnswered!==null&&e.key==="Enter"){advanceLearnSession()}});
 document.addEventListener("keydown",e=>{if(state.route!=="quizExcel"||["INPUT","TEXTAREA","SELECT"].includes(document.activeElement.tagName))return;const questions=excelActiveQuestions();if(!questions.length)return;if(state.excelQuiz.answered===null&&["1","2","3","4"].includes(e.key)){e.preventDefault();answerExcelQuestion(Number(e.key)-1)}else if(state.excelQuiz.answered!==null&&e.key==="Enter"){e.preventDefault();nextExcelQuestion()}});
 document.addEventListener("keydown",e=>{
   if(isTextEditingTarget())return;
@@ -1921,7 +2109,7 @@ function resetDeckSessionProgress(index=state.activeCreatedDeck){
   state.detailProgress={...(state.detailProgress||{})};
   Object.keys(state.detailProgress).filter(key=>key.startsWith(prefix)).forEach(key=>delete state.detailProgress[key]);
 }
-function startLearnSession(){const deck=state.createdDecks[state.activeCreatedDeck];if(!deck?.cards?.length){showToast("Bộ thẻ chưa có nội dung","circle-alert");return}resetDeckSessionProgress(state.activeCreatedDeck);let order=deck.cards.map((_,i)=>i);if(state.learnSettings.starredOnly)order=order.filter(i=>isDetailStarred(i));if(state.learnSettings.unmasteredOnly)order=order.filter(i=>detailStatus(i)!=="mastered");if(!state.learnSettings.inOrder)order=shuffled(order);state.learnOrder=order;state.learnIndex=0;state.learnCompleted=0;state.learnCorrect=0;state.learnUnknown=0;state.learnAnswered=null;state.learnOptions=order.length?buildLearnOptions(order[0]):[];state.route="learnSession";save();render()}
+function startLearnSession(options={}){const deck=state.createdDecks[state.activeCreatedDeck];if(!deck?.cards?.length){showToast("Bộ thẻ chưa có nội dung","circle-alert");return}resetDeckSessionProgress(state.activeCreatedDeck);let order=Array.isArray(options.order)?options.order.filter(i=>deck.cards[i]):deck.cards.map((_,i)=>i);if(!Array.isArray(options.order)){if(state.learnSettings.starredOnly)order=order.filter(i=>isDetailStarred(i));if(state.learnSettings.unmasteredOnly)order=order.filter(i=>detailStatus(i)!=="mastered");if(!state.learnSettings.inOrder)order=shuffled(order)}state.learnSessionStats=blankLearnSessionStats();state.learnSessionStats.mode=options.mode||"normal";state.learnOrder=order;state.learnIndex=0;state.learnCompleted=0;state.learnCorrect=0;state.learnUnknown=0;state.learnAnswered=null;state.learnOptions=order.length?buildLearnOptions(order[0]):[];state.route="learnSession";save();render()}
 function advanceLearnSession(){const cardIndex=state.learnOrder[state.learnIndex];const correct=state.learnAnswered==="fill-correct"||(Number.isInteger(state.learnAnswered)&&learnOptionIsCorrect(state.learnOptions[state.learnAnswered],cardIndex));state.detailProgress[`${state.activeCreatedDeck}:${cardIndex}`]=correct?"mastered":"learning";state.learnCompleted++;state.learnIndex++;state.learnAnswered=null;state.learnSettings.showExample=false;if(state.learnCompleted>=state.learnOrder.length)touchDeckStudyStats(state.activeCreatedDeck,{increment:true});if(state.learnIndex<state.learnOrder.length)state.learnOptions=buildLearnOptions(state.learnOrder[state.learnIndex]);save();render()}
 function openLearnSettings(){const s=state.learnSettings,deck=state.createdDecks[state.activeCreatedDeck],starred=deck.cards.filter((_,i)=>isDetailStarred(i)).length,unmastered=deck.cards.filter((_,i)=>detailStatus(i)!=="mastered").length;modal("Cài đặt học tập",`<p class="muted text-xs mb-5">Tùy chỉnh cách bạn muốn học và kiểm tra</p><div class="learn-settings">
   <section class="settings-section"><h3>Chế độ trả lời</h3>
@@ -1976,7 +2164,7 @@ function shouldHideAsSameQuestionAnswer(answerText,questionGrammar){
   if(normalizeLearnText(answer)===normalizeLearnText(question))return true;
   return isSameGrammarAsQuestion(answer,question);
 }
-function checkFillBlank(){if(state.learnAnswered!==null)return;const deck=state.createdDecks[state.activeCreatedDeck],card=deck.cards[state.learnOrder[state.learnIndex]],typed=normalizeLearnText(document.querySelector("#fillBlankAnswer")?.value),answers=learnFillBlankAnswers(card);const correct=answers.some(x=>normalizeLearnText(x)===typed);state.learnAnswered=correct?"fill-correct":"fill-wrong";if(correct){state.learnCorrect++;state.xp+=10;state.today++}save();render();if(correct&&state.learnSettings.autoAdvance)setTimeout(()=>{if(state.route==="learnSession"&&state.learnAnswered==="fill-correct")advanceLearnSession()},700)}
+function checkFillBlank(){if(state.learnAnswered!==null)return;const deck=state.createdDecks[state.activeCreatedDeck],cardIndex=state.learnOrder[state.learnIndex],card=deck.cards[cardIndex],typed=normalizeLearnText(document.querySelector("#fillBlankAnswer")?.value),answers=learnFillBlankAnswers(card);const correct=answers.some(x=>normalizeLearnText(x)===typed);state.learnAnswered=correct?"fill-correct":"fill-wrong";recordLearnResult(cardIndex,correct);if(correct){state.learnCorrect++;state.xp+=10;state.today++}save();render();if(correct&&state.learnSettings.autoAdvance)setTimeout(()=>{if(state.route==="learnSession"&&state.learnAnswered==="fill-correct")advanceLearnSession()},700)}
 function lookup(){const q=(document.querySelector("#dictionaryInput")?.value||"").trim().toLowerCase();const found=words.filter(w=>[w.term,w.reading,w.meaning].some(x=>x.toLowerCase().includes(q)));document.querySelector("#dictionaryResults").innerHTML=found.length?found.map(w=>`<div class="card list-row"><strong class="text-2xl text-indigo-400">${w.term}</strong><div class="row-main"><strong>${w.reading}</strong><small>${w.meaning}</small></div><button class="icon-button" data-speak="${w.term}">${icon("volume-2")}</button></div>`).join(""):'<p class="empty">Không tìm thấy từ phù hợp.</p>'}
 function filterDecks(){const q=(document.querySelector("#deckSearch").value||"").toLowerCase();const sort=document.querySelector("#deckSort").value;const list=decks.filter(d=>(d.name+d.term).toLowerCase().includes(q)).sort((a,b)=>sort==="progress"?b.learned/b.total-a.learned/a.total:a.name.localeCompare(b.name));document.querySelector("#deckResults").innerHTML=`<div class="deck-grid">${list.map(d=>`<article class="card deck-card card-hover" data-deck="${d.id}"><span class="text-xl">${d.icon}</span><h3>${d.name}</h3><p>${d.term}</p><div class="mt-3">${progress(Math.round(d.learned/d.total*100))}</div></article>`).join("")}</div>`}
 function filterCreatedDecks(){const activeFolder=String(state.activeCreatedFolder||"");const all=(state.createdDecks||[]).map((deck,index)=>({deck,index})).filter(x=>createdFolderName(x.deck)===activeFolder);const query=document.querySelector("#createdDeckSearch")?.value||"";const sort=document.querySelector("#createdDeckSort")?.value||"name-asc";const size=document.querySelector("#createdDeckSizeFilter")?.value||"all";const filtered=sortCreatedDeckItems(filterCreatedDeckItems(all,query,size),sort);const count=document.querySelector("#createdDeckFilterCount");if(count)count.textContent=`${filtered.length}/${all.length} bộ`;const target=document.querySelector("#createdDeckResults");if(target)target.innerHTML=createdDeckGrid(filtered)}
@@ -2024,7 +2212,7 @@ document.querySelector("#profileMenu").innerHTML=`<button class="dropdown-item" 
 document.querySelector("#searchButton").onclick=()=>modal("Tìm kiếm nhanh",`<input id="globalSearch" class="input" autofocus placeholder="Tìm khóa học, bộ từ, từ vựng..."><div class="search-results">${decks.slice(0,3).map(d=>`<button class="dropdown-item" data-deck="${d.id}">${d.icon} ${d.name}</button>`).join("")}</div>`);
 document.addEventListener("click",e=>{if(!e.target.closest("#notificationButton")&&!e.target.closest("#notificationMenu"))document.querySelector("#notificationMenu")?.classList.remove("show");if(!e.target.closest("#profileButton")&&!e.target.closest("#profileMenu"))document.querySelector("#profileMenu")?.classList.remove("show");if(!e.target.closest("#hvqQuickBackgroundButton")&&!e.target.closest("#hvqQuickBackgroundPanel"))closeQuickBackgroundPanel()});
 
-async function initApp(){await loadCreatedDecks();render();setTimeout(applyCustomLogo,0)}
+async function initApp(){await hvqMigrateLegacyPersonalDataToOwner();await hvqLoadCurrentAccountPersonalData();save();render();setTimeout(applyCustomLogo,0)}
 initApp();
 
 (function injectAiShortExplainStyle(){
