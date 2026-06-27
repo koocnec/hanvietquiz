@@ -1,4 +1,4 @@
-// HVQ_PERSONAL_SCOPE_FIXED_V7 - dữ liệu cá nhân tách riêng theo Gmail, legacy chuyển về buivantoan1998@gmail.com
+// HVQ_MOBILE_BOTTOM_NAV_V12_ROOT_DECKS - bấm tab Đã tạo luôn về danh sách thư mục, không tự mở thư mục cũ
 const routes = {
   home:["Trang chủ","home"], courses:["Khoá học","book-open"], decks:["Bộ từ vựng","layers"],
   inputData:["Nhập liệu","table-properties"], quizExcel:["Quiz từ Excel","file-spreadsheet"], practice:["Luyện tập","pen-tool"], exam:["Luyện thi","file-check"], community:["Cộng đồng","users"],
@@ -569,6 +569,94 @@ function ensureFixedTopbarStyle(){
     .quick-bg-title{display:flex;justify-content:space-between;align-items:center;font-weight:800}
     .quick-bg-close{border:0;background:rgba(148,163,184,.12);color:#e5e7eb;border-radius:10px;min-width:34px;min-height:30px;cursor:pointer}
     @media(max-width:820px){#hvqQuickBackgroundButton span{display:none}#hvqQuickBackgroundButton{padding:0 10px}}
+
+
+    /* HVQ_MOBILE_TOPBAR_FIXED_V9_CSS - Mobile fix: trên điện thoại chỉ hiện 4 tab chính để không bị chồng chữ */
+    @media(max-width:640px){
+      :root{--hvq-topbar-height:66px}
+      .hvq-fixed-topbar{
+        gap:6px!important;
+        padding:0 6px!important;
+        overflow:hidden!important;
+      }
+      #hvqBrandLogoLink{
+        width:34px!important;
+        height:34px!important;
+        min-width:34px!important;
+        margin-right:2px!important;
+      }
+      #hvqBrandLogoLink img{
+        width:38px!important;
+        height:38px!important;
+      }
+      .hvq-fixed-topbar #topNav,
+      #topNav{
+        flex:1 1 auto!important;
+        min-width:0!important;
+        display:grid!important;
+        grid-template-columns:repeat(4,minmax(0,1fr))!important;
+        align-items:center!important;
+        gap:2px!important;
+        width:auto!important;
+        overflow:visible!important;
+      }
+      .hvq-fixed-topbar #topNav .nav-button{
+        min-width:0!important;
+        width:100%!important;
+        max-width:none!important;
+        height:46px!important;
+        padding:3px 2px!important;
+        border-radius:12px!important;
+        display:none!important;
+        flex-direction:column!important;
+        align-items:center!important;
+        justify-content:center!important;
+        gap:2px!important;
+        font-size:10.5px!important;
+        line-height:1.05!important;
+        white-space:normal!important;
+        text-align:center!important;
+      }
+      .hvq-fixed-topbar #topNav .nav-button[data-route="home"],
+      .hvq-fixed-topbar #topNav .nav-button[data-route="decks"],
+      .hvq-fixed-topbar #topNav .nav-button[data-route="inputData"],
+      .hvq-fixed-topbar #topNav .nav-button[data-route="quizExcel"]{
+        display:inline-flex!important;
+      }
+      .hvq-fixed-topbar #topNav .nav-button .iconify{
+        font-size:15px!important;
+        min-width:15px!important;
+      }
+      .hvq-fixed-topbar #topNav .nav-button span:not(.iconify){
+        display:block!important;
+        max-width:100%!important;
+        overflow:hidden!important;
+        text-overflow:ellipsis!important;
+      }
+      #hvqTopbarRightActions{
+        display:none!important;
+        width:0!important;
+        min-width:0!important;
+        margin:0!important;
+        padding:0!important;
+      }
+      body.hvq-topbar-fixed .sidebar,
+      body.hvq-topbar-fixed aside,
+      body.hvq-topbar-fixed #mainSidebar,
+      body.hvq-topbar-fixed #toolSidebar{
+        display:none!important;
+      }
+      body.hvq-topbar-fixed main,
+      body.hvq-topbar-fixed .main,
+      body.hvq-topbar-fixed .main-content,
+      body.hvq-topbar-fixed .workspace,
+      body.hvq-topbar-fixed .page{
+        width:100%!important;
+        margin-left:0!important;
+        padding-left:12px!important;
+        padding-right:12px!important;
+      }
+    }
   `;
   document.head.appendChild(style);
 }
@@ -633,6 +721,7 @@ function ensureFixedTopbar(){
 
 
 function ensureTopBackgroundButton(topbar=null){
+  ensureMobileBottomNavStyle();
   topbar = topbar || document.querySelector(".hvq-fixed-topbar") || findTopbarElement();
   if(!topbar)return;
 
@@ -738,9 +827,176 @@ function ensureTopBackgroundButton(topbar=null){
     profile.style.setProperty("padding","0 10px","important");
     profile.style.setProperty("gap","8px","important");
   }
+  applyMobileTopbarCompactMode(topbar);
+
 }
 
 
+
+
+function ensureMobileBottomNavStyle(){
+  if(document.querySelector("#hvqMobileBottomNavStyle"))return;
+  const style=document.createElement("style");
+  style.id="hvqMobileBottomNavStyle";
+  style.textContent=`
+    @media (max-width:640px){
+      :root{--hvq-mobile-bottom-nav-height:72px}
+      body.hvq-topbar-fixed{
+        padding-top:0!important;
+        padding-bottom:calc(var(--hvq-mobile-bottom-nav-height) + env(safe-area-inset-bottom,0px))!important;
+      }
+      .hvq-fixed-topbar{
+        top:auto!important;
+        bottom:0!important;
+        left:0!important;
+        right:0!important;
+        width:100%!important;
+        height:var(--hvq-mobile-bottom-nav-height)!important;
+        min-height:var(--hvq-mobile-bottom-nav-height)!important;
+        max-height:var(--hvq-mobile-bottom-nav-height)!important;
+        border-top:1px solid rgba(148,163,184,.18)!important;
+        border-bottom:0!important;
+        padding-bottom:env(safe-area-inset-bottom,0px)!important;
+      }
+      .hvq-fixed-topbar #topNav{
+        width:100%!important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function applyMobileTopbarCompactMode(topbar=null){
+  topbar = topbar || document.querySelector(".hvq-fixed-topbar") || findTopbarElement();
+  const topNav=document.querySelector("#topNav");
+  const rightHost=document.querySelector("#hvqTopbarRightActions");
+  const brand=document.querySelector("#hvqBrandLogoLink");
+  const isMobile=window.matchMedia && window.matchMedia("(max-width:640px)").matches;
+  if(!topbar || !topNav)return;
+
+  const mobileRoutes=new Set(["home","decks","inputData","quizExcel"]);
+  topNav.querySelectorAll(".nav-button").forEach(btn=>{
+    const keep=mobileRoutes.has(btn.dataset.route||"");
+    if(isMobile){
+      btn.style.setProperty("display",keep?"inline-flex":"none","important");
+      btn.style.setProperty("width","100%","important");
+      btn.style.setProperty("min-width","0","important");
+      btn.style.setProperty("height","46px","important");
+      btn.style.setProperty("padding","3px 1px","important");
+      btn.style.setProperty("border-radius","12px","important");
+      btn.style.setProperty("flex-direction","column","important");
+      btn.style.setProperty("align-items","center","important");
+      btn.style.setProperty("justify-content","center","important");
+      btn.style.setProperty("gap","2px","important");
+      btn.style.setProperty("font-size","10px","important");
+      btn.style.setProperty("line-height","1.05","important");
+      btn.style.setProperty("white-space","normal","important");
+      btn.style.setProperty("text-align","center","important");
+      btn.querySelectorAll(".iconify").forEach(ic=>{
+        ic.style.setProperty("font-size","15px","important");
+        ic.style.setProperty("min-width","15px","important");
+      });
+    }else{
+      ["display","width","min-width","height","padding","border-radius","flex-direction","align-items","justify-content","gap","font-size","line-height","white-space","text-align"].forEach(k=>btn.style.removeProperty(k));
+      btn.querySelectorAll(".iconify").forEach(ic=>{
+        ic.style.removeProperty("font-size");
+        ic.style.removeProperty("min-width");
+      });
+    }
+  });
+
+  if(isMobile){
+    document.documentElement.style.setProperty("--hvq-topbar-height","0px");
+    document.documentElement.style.setProperty("--hvq-mobile-bottom-nav-height","72px");
+    topbar.style.setProperty("height","72px","important");
+    topbar.style.setProperty("min-height","72px","important");
+    topbar.style.setProperty("max-height","72px","important");
+    topbar.style.setProperty("display","flex","important");
+    topbar.style.setProperty("flex-direction","row","important");
+    topbar.style.setProperty("align-items","center","important");
+    topbar.style.setProperty("justify-content","center","important");
+    topbar.style.setProperty("gap","0","important");
+    topbar.style.setProperty("padding","6px 8px","important");
+    topbar.style.setProperty("overflow","hidden","important");
+    topbar.style.setProperty("top","auto","important");
+    topbar.style.setProperty("bottom","0","important");
+    topbar.style.setProperty("left","0","important");
+    topbar.style.setProperty("right","0","important");
+    topbar.style.setProperty("border-top","1px solid rgba(148,163,184,.18)","important");
+    topbar.style.setProperty("border-bottom","0","important");
+
+    if(brand){
+      brand.style.setProperty("display","none","important");
+      brand.style.setProperty("visibility","hidden","important");
+      brand.style.setProperty("opacity","0","important");
+      brand.style.setProperty("width","0","important");
+      brand.style.setProperty("height","0","important");
+      brand.style.setProperty("min-width","0","important");
+      brand.style.setProperty("margin","0","important");
+      brand.querySelectorAll("img").forEach(img=>{
+        img.style.setProperty("width","0","important");
+        img.style.setProperty("height","0","important");
+      });
+    }
+
+    topNav.style.setProperty("display","grid","important");
+    topNav.style.setProperty("grid-template-columns","repeat(4,minmax(0,1fr))","important");
+    topNav.style.setProperty("align-items","center","important");
+    topNav.style.setProperty("justify-items","stretch","important");
+    topNav.style.setProperty("gap","4px","important");
+    topNav.style.setProperty("flex","1 1 100%","important");
+    topNav.style.setProperty("min-width","0","important");
+    topNav.style.setProperty("width","100%","important");
+    topNav.style.setProperty("overflow","hidden","important");
+
+    if(rightHost){
+      rightHost.style.setProperty("display","none","important");
+      rightHost.style.setProperty("visibility","hidden","important");
+      rightHost.style.setProperty("opacity","0","important");
+      rightHost.style.setProperty("width","0","important");
+      rightHost.style.setProperty("min-width","0","important");
+      rightHost.style.setProperty("height","0","important");
+      rightHost.style.setProperty("min-height","0","important");
+      rightHost.style.setProperty("margin","0","important");
+      rightHost.style.setProperty("padding","0","important");
+      rightHost.style.setProperty("overflow","hidden","important");
+      rightHost.querySelectorAll("*").forEach(el=>{
+        el.style.setProperty("display","none","important");
+        el.style.setProperty("visibility","hidden","important");
+        el.style.setProperty("opacity","0","important");
+        el.style.setProperty("pointer-events","none","important");
+      });
+    }
+
+    ["#hvqQuickBackgroundButton","#searchButton","#notificationButton","#profileButton","#profileMenu"].forEach(sel=>{
+      document.querySelectorAll(sel).forEach(el=>{
+        if(sel==="#profileMenu" || el.closest(".hvq-fixed-topbar")){
+          el.style.setProperty("display","none","important");
+          el.style.setProperty("visibility","hidden","important");
+          el.style.setProperty("opacity","0","important");
+          el.style.setProperty("pointer-events","none","important");
+        }
+      });
+    });
+    document.querySelectorAll("#mainSidebar,#toolSidebar,.sidebar,aside").forEach(el=>el.style.setProperty("display","none","important"));
+  }else{
+    document.documentElement.style.removeProperty("--hvq-topbar-height");
+    document.documentElement.style.removeProperty("--hvq-mobile-bottom-nav-height");
+    topbar.style.removeProperty("bottom");
+    topbar.style.setProperty("top","0","important");
+    topbar.style.removeProperty("justify-content");
+    topbar.style.removeProperty("border-top");
+    topbar.style.removeProperty("border-bottom");
+    if(brand){
+      ["display","visibility","opacity","width","height","min-width","margin"].forEach(k=>brand.style.removeProperty(k));
+      brand.querySelectorAll("img").forEach(img=>["width","height"].forEach(k=>img.style.removeProperty(k)));
+    }
+    if(rightHost){
+      ["display","visibility","opacity","width","min-width","height","min-height","margin","padding","overflow"].forEach(k=>rightHost.style.removeProperty(k));
+      rightHost.querySelectorAll("*").forEach(el=>["display","visibility","opacity","pointer-events"].forEach(k=>el.style.removeProperty(k)));
+    }
+  }
+}
 
 function closeQuickBackgroundPanel(){document.querySelector("#hvqQuickBackgroundPanel")?.remove()}
 function openQuickBackgroundPanel(){
@@ -869,7 +1125,6 @@ function goBackPage(){
   if(state.route==="learnSession"&&Number.isInteger(state.activeCreatedDeck)&&state.createdDecks?.[state.activeCreatedDeck]){
     state.route="deckDetail";
     state.detailMode="flashcard";
-    state.learnAnswered=null;
     hvqRestoringBack=true;
     save();
     render();
@@ -1417,7 +1672,7 @@ function startWrongLearnSession(){
   const deck=state.createdDecks[state.activeCreatedDeck];
   const order=learnWrongItems().map(item=>item.cardIndex).filter(i=>deck?.cards?.[i]);
   if(!order.length){showToast("Không có từ sai để học lại","circle-alert");return}
-  startLearnSession({order,mode:"wrong"});
+  startLearnSession({order,mode:"wrong",forceRestart:true,preserveDeckProgress:true});
 }
 
 function learnSessionPage(){const deck=state.createdDecks[state.activeCreatedDeck];if(!deck){state.route="decks";return decksPage()}if(!state.learnOrder.length)return `<div class="learn-session"><div class="learn-topbar"><button class="learn-exit" data-action="exit-learn">${icon("arrow-left")} Thoát</button><button class="button small" data-action="learn-settings">${icon("settings")} Cài đặt</button></div><section class="card learn-finished"><h1>Không có thẻ phù hợp</h1><p class="muted">Hãy thay đổi bộ lọc trong Cài đặt học tập.</p></section></div>`;if(state.learnCompleted>=state.learnOrder.length)return `<div class="learn-session"><div class="learn-topbar"><button class="learn-exit" data-action="exit-learn">${icon("arrow-left")} Thoát</button></div><section class="card learn-finished"><strong>${state.learnCorrect}/${state.learnOrder.length}</strong><h1>Hoàn thành phiên học!</h1><p class="muted">Bạn đã trả lời đúng ${state.learnCorrect} câu và chọn “Tôi không biết” ${state.learnUnknown} câu.</p>${learnSessionSummaryHtml(deck)}<div class="flex justify-center gap-2 mt-6 flex-wrap"><button class="button" data-action="exit-learn">Về bộ thẻ</button><button class="button primary" data-action="restart-learn">Học lại toàn bộ</button></div></section></div>`;
@@ -1691,7 +1946,18 @@ const pageRenderers={home:homePage,courses:coursesPage,decks:decksPage,inputData
 function render(){rememberNavigation();applyBackgroundStyle();ensureLearnSummaryStyle();document.body.classList.toggle("learn-mode",state.route==="learnSession");renderNav();renderUserUi();app.innerHTML=(pageRenderers[state.route]||homePage)();ensureFixedTopbar();applyCustomLogo();setTimeout(()=>{ensureFixedTopbar();applyCustomLogo()},0);window.scrollTo({top:0});}
 
 document.addEventListener("click",e=>{
-  const route=e.target.closest("[data-route]")?.dataset.route;if(route){routeTo(route);return}
+  const route=e.target.closest("[data-route]")?.dataset.route;if(route){
+    // V12: bấm tab Đã tạo trên thanh điều hướng phải mở trang danh sách thư mục gốc.
+    // Trước đây activeCreatedFolder còn lưu thư mục cũ nên tab Đã tạo tự chui vào thư mục đang mở dở.
+    if(route==="decks"){
+      state.activeCreatedFolder="";
+      state.activeCreatedDeck=null;
+      state.detailFlipped=false;
+      state.detailMode="flashcard";
+    }
+    routeTo(route);
+    return
+  }
   if(e.target.closest("[data-close-modal]")||e.target.id==="modal"){closeModal();return}
   const action=e.target.closest("[data-action]")?.dataset.action;
   if(action){
@@ -1748,8 +2014,8 @@ document.addEventListener("click",e=>{
     if(action==="flash-settings"){showToast("Đã mở cài đặt thẻ","sliders-horizontal");return}
     if(action==="show-progress"){document.querySelector("#card-groups")?.scrollIntoView({behavior:"smooth"});return}
     if(action==="start-detail-mode"){showToast("Chế độ học đã sẵn sàng","play");return}
-    if(action==="exit-learn"){state.route="deckDetail";state.detailMode="flashcard";state.learnAnswered=null;save();render();return}
-    if(action==="restart-learn"){startLearnSession();return}
+    if(action==="exit-learn"){state.route="deckDetail";state.detailMode="flashcard";save();render();return}
+    if(action==="restart-learn"){startLearnSession({forceRestart:true});return}
     if(action==="learn-wrong-again"){startWrongLearnSession();return}
     if(action==="star-all-wrong"){starWrongCards();return}
     if(action==="learn-settings"){openLearnSettings();return}
@@ -2109,7 +2375,71 @@ function resetDeckSessionProgress(index=state.activeCreatedDeck){
   state.detailProgress={...(state.detailProgress||{})};
   Object.keys(state.detailProgress).filter(key=>key.startsWith(prefix)).forEach(key=>delete state.detailProgress[key]);
 }
-function startLearnSession(options={}){const deck=state.createdDecks[state.activeCreatedDeck];if(!deck?.cards?.length){showToast("Bộ thẻ chưa có nội dung","circle-alert");return}resetDeckSessionProgress(state.activeCreatedDeck);let order=Array.isArray(options.order)?options.order.filter(i=>deck.cards[i]):deck.cards.map((_,i)=>i);if(!Array.isArray(options.order)){if(state.learnSettings.starredOnly)order=order.filter(i=>isDetailStarred(i));if(state.learnSettings.unmasteredOnly)order=order.filter(i=>detailStatus(i)!=="mastered");if(!state.learnSettings.inOrder)order=shuffled(order)}state.learnSessionStats=blankLearnSessionStats();state.learnSessionStats.mode=options.mode||"normal";state.learnOrder=order;state.learnIndex=0;state.learnCompleted=0;state.learnCorrect=0;state.learnUnknown=0;state.learnAnswered=null;state.learnOptions=order.length?buildLearnOptions(order[0]):[];state.route="learnSession";save();render()}
+function learnSessionDeckIndex(){
+  const stats=state.learnSessionStats||{};
+  return Number.isInteger(stats.deckIndex)?stats.deckIndex:null;
+}
+function hasPausedLearnSession(index=state.activeCreatedDeck){
+  const deck=state.createdDecks?.[index];
+  if(!deck?.cards?.length)return false;
+  if(!Array.isArray(state.learnOrder)||!state.learnOrder.length)return false;
+  const sessionDeck=learnSessionDeckIndex();
+  if(Number.isInteger(sessionDeck)&&sessionDeck!==index)return false;
+  const completed=Math.max(0,Number(state.learnCompleted)||0);
+  if(completed>=state.learnOrder.length)return false;
+  const safeIndex=Math.min(Math.max(Number(state.learnIndex)||0,0),state.learnOrder.length-1);
+  const cardIndex=state.learnOrder[safeIndex];
+  if(!Number.isInteger(cardIndex)||!deck.cards[cardIndex])return false;
+  return true;
+}
+function resumeLearnSession(index=state.activeCreatedDeck){
+  if(!hasPausedLearnSession(index))return false;
+  state.activeCreatedDeck=index;
+  state.learnIndex=Math.min(Math.max(Number(state.learnIndex)||0,0),state.learnOrder.length-1);
+  state.learnCompleted=Math.min(Math.max(Number(state.learnCompleted)||0,0),Math.max(0,state.learnOrder.length-1));
+  const currentCardIndex=state.learnOrder[state.learnIndex];
+  if(!Array.isArray(state.learnOptions)||!state.learnOptions.length)state.learnOptions=buildLearnOptions(currentCardIndex);
+  state.learnSessionStats={...blankLearnSessionStats(),...(state.learnSessionStats||{}),deckIndex:index,resumedAt:new Date().toISOString()};
+  state.learnSessionStats.wrongMap={...(state.learnSessionStats.wrongMap||{})};
+  state.learnSessionStats.wrongOrder=Array.isArray(state.learnSessionStats.wrongOrder)?state.learnSessionStats.wrongOrder:[];
+  state.learnSessionStats.correctIds=Array.isArray(state.learnSessionStats.correctIds)?state.learnSessionStats.correctIds:[];
+  state.route="learnSession";
+  save();
+  render();
+  showToast("Đã tiếp tục phiên học đang dở","play");
+  return true;
+}
+function startLearnSession(options={}){
+  const deck=state.createdDecks[state.activeCreatedDeck];
+  if(!deck?.cards?.length){showToast("Bộ thẻ chưa có nội dung","circle-alert");return}
+  const hasCustomOrder=Array.isArray(options.order);
+  const forceRestart=!!options.forceRestart||hasCustomOrder;
+  if(!forceRestart&&hasPausedLearnSession(state.activeCreatedDeck)){
+    resumeLearnSession(state.activeCreatedDeck);
+    return;
+  }
+  if(options.preserveDeckProgress!==true)resetDeckSessionProgress(state.activeCreatedDeck);
+  let order=hasCustomOrder?options.order.filter(i=>deck.cards[i]):deck.cards.map((_,i)=>i);
+  if(!hasCustomOrder){
+    if(state.learnSettings.starredOnly)order=order.filter(i=>isDetailStarred(i));
+    if(state.learnSettings.unmasteredOnly)order=order.filter(i=>detailStatus(i)!=="mastered");
+    if(!state.learnSettings.inOrder)order=shuffled(order);
+  }
+  state.learnSessionStats=blankLearnSessionStats();
+  state.learnSessionStats.mode=options.mode||"normal";
+  state.learnSessionStats.deckIndex=state.activeCreatedDeck;
+  state.learnSessionStats.startedAt=new Date().toISOString();
+  state.learnOrder=order;
+  state.learnIndex=0;
+  state.learnCompleted=0;
+  state.learnCorrect=0;
+  state.learnUnknown=0;
+  state.learnAnswered=null;
+  state.learnOptions=order.length?buildLearnOptions(order[0]):[];
+  state.route="learnSession";
+  save();
+  render();
+}
 function advanceLearnSession(){const cardIndex=state.learnOrder[state.learnIndex];const correct=state.learnAnswered==="fill-correct"||(Number.isInteger(state.learnAnswered)&&learnOptionIsCorrect(state.learnOptions[state.learnAnswered],cardIndex));state.detailProgress[`${state.activeCreatedDeck}:${cardIndex}`]=correct?"mastered":"learning";state.learnCompleted++;state.learnIndex++;state.learnAnswered=null;state.learnSettings.showExample=false;if(state.learnCompleted>=state.learnOrder.length)touchDeckStudyStats(state.activeCreatedDeck,{increment:true});if(state.learnIndex<state.learnOrder.length)state.learnOptions=buildLearnOptions(state.learnOrder[state.learnIndex]);save();render()}
 function openLearnSettings(){const s=state.learnSettings,deck=state.createdDecks[state.activeCreatedDeck],starred=deck.cards.filter((_,i)=>isDetailStarred(i)).length,unmastered=deck.cards.filter((_,i)=>detailStatus(i)!=="mastered").length;modal("Cài đặt học tập",`<p class="muted text-xs mb-5">Tùy chỉnh cách bạn muốn học và kiểm tra</p><div class="learn-settings">
   <section class="settings-section"><h3>Chế độ trả lời</h3>
@@ -2133,8 +2463,8 @@ function openLearnSettings(){const s=state.learnSettings,deck=state.createdDecks
   <div class="settings-footer"><button class="button" data-action="reset-learn-progress">${icon("rotate-ccw")} Reset tiến độ học</button><button class="button primary" data-action="apply-learn-settings">Áp dụng</button></div>
   </div>`);document.querySelector(".modal-card").classList.add("learn-settings-modal")}
 function settingCheck(name,label,help,checked){return `<label class="setting-choice"><input type="checkbox" data-learn-setting="${name}" ${checked?"checked":""}><span>${label}${help?`<small>${help}</small>`:""}</span></label>`}
-function applyLearnSettings(){const next={};document.querySelectorAll("[data-learn-setting]").forEach(input=>next[input.dataset.learnSetting]=input.checked);if(!next.answerDefinition&&!next.answerTerm){showToast("Hãy chọn ít nhất một chế độ trả lời","circle-alert");return}if(!next.fillBlank&&!next.multipleChoice){showToast("Hãy chọn ít nhất một loại câu hỏi","circle-alert");return}if(next.answerDefinition&&next.answerTerm)next.answerTerm=false;if(next.fillBlank&&next.multipleChoice)next.fillBlank=false;state.learnSettings={...state.learnSettings,...next};closeModal();startLearnSession();showToast("Đã áp dụng cài đặt")}
-function resetLearnProgress(){if(!confirm("Reset toàn bộ tiến độ học của bộ thẻ này?"))return;const prefix=`${state.activeCreatedDeck}:`;Object.keys(state.detailProgress).filter(key=>key.startsWith(prefix)).forEach(key=>delete state.detailProgress[key]);save();showToast("Đã reset tiến độ học");closeModal();startLearnSession()}
+function applyLearnSettings(){const next={};document.querySelectorAll("[data-learn-setting]").forEach(input=>next[input.dataset.learnSetting]=input.checked);if(!next.answerDefinition&&!next.answerTerm){showToast("Hãy chọn ít nhất một chế độ trả lời","circle-alert");return}if(!next.fillBlank&&!next.multipleChoice){showToast("Hãy chọn ít nhất một loại câu hỏi","circle-alert");return}if(next.answerDefinition&&next.answerTerm)next.answerTerm=false;if(next.fillBlank&&next.multipleChoice)next.fillBlank=false;state.learnSettings={...state.learnSettings,...next};closeModal();startLearnSession({forceRestart:true});showToast("Đã áp dụng cài đặt")}
+function resetLearnProgress(){if(!confirm("Reset toàn bộ tiến độ học của bộ thẻ này?"))return;const prefix=`${state.activeCreatedDeck}:`;Object.keys(state.detailProgress).filter(key=>key.startsWith(prefix)).forEach(key=>delete state.detailProgress[key]);save();showToast("Đã reset tiến độ học");closeModal();startLearnSession({forceRestart:true})}
 function normalizeLearnText(value){return String(value||"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[.,;:!?()[\]{}'"]/g,"").replace(/\s+/g," ")}
 function grammarBaseKey(value){
   let text=String(value||"")
@@ -2251,3 +2581,10 @@ initApp();
   `;
   document.head.appendChild(style);
 })();
+
+
+// V11: khi đổi kích thước màn hình, tự áp lại bottom nav mobile.
+if(!window.__hvqMobileBottomNavV11Resize){
+  window.__hvqMobileBottomNavV11Resize=true;
+  window.addEventListener("resize",()=>applyMobileTopbarCompactMode(),{passive:true});
+}
