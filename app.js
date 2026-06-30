@@ -47,7 +47,7 @@ const blankDraftCard=()=>({term:"",definition:"",pronunciation:"",wordType:"",ex
 const defaultLearnSettings={answerDefinition:true,answerTerm:false,starredOnly:false,unmasteredOnly:false,inOrder:false,acceptSynonyms:true,autoAdvance:true,showExample:false,fillBlank:false,multipleChoice:true};
 const defaultUser={name:"Khách",email:"",picture:"",sub:"",signedIn:false};
 const defaultBackground={mode:"preset",preset:"dotGrid",customUrl:"",opacity:1,overlay:0.08,blur:0};
-const defaultExcelQuiz={sourceUrl:"",pasteData:"",questions:[],index:0,score:0,answered:null,shuffle:true,autoAdvance:false,onlyWrong:false,onlyStarred:false,onlyUnmastered:false,pageFilter:"all",wrongIds:[],starredIds:[],correctIds:[],sourceName:"Chưa có dữ liệu"};
+const defaultExcelQuiz={sourceUrl:"",pasteData:"",questions:[],index:0,score:0,answered:null,shuffle:true,autoAdvance:false,autoNextPage:false,onlyWrong:false,onlyStarred:false,onlyUnmastered:false,pageFilter:"all",wrongIds:[],starredIds:[],correctIds:[],sourceName:"Chưa có dữ liệu"};
 const defaultQuickQuiz={deckIndex:null,cardOrder:[],options:[],questionKey:""};
 const blankLearnSessionStats=()=>({correctIds:[],wrongMap:{},wrongOrder:[],mode:"normal"});
 const savedInputSheets={
@@ -61,7 +61,7 @@ const savedInputColumns={
   "ngu phap":{termCol:"D",meaningCol:"E",exampleCol:"F",synonymCol:"G",mergeRows:true}
 };
 const defaultInputData={sourceType:"sheet",sheetUrl:savedInputSheets.NhapLieu,savedSheet:"NhapLieu",termCol:"B",meaningCol:"A",exampleCol:"C",synonymCol:"",autoDetect:true,mergeRows:false,folderSize:50,lastFileName:"",selected:true,lastAppliedAt:"",lastResult:null};
-const defaultState={route:"home",lastOpenedTab:"decks",streak:7,today:146,minutes:42,xp:2340,quizIndex:0,quizScore:0,quizAnswered:null,quickQuiz:defaultQuickQuiz,flashIndex:0,activeCreatedDeck:null,activeCreatedFolder:"",detailCardIndex:0,detailFlipped:false,detailMode:"flashcard",detailSearch:"",detailFilter:"all",detailSort:"original",detailProgress:{},detailStars:{},deckStudyStats:{},learnOrder:[],learnIndex:0,learnOptions:[],learnAnswered:null,learnCorrect:0,learnUnknown:0,learnCompleted:0,learnSessionStats:blankLearnSessionStats(),learnSettings:defaultLearnSettings,excelQuiz:defaultExcelQuiz,inputData:defaultInputData,theme:"dark",dailyGoal:30,notifications:true,background:defaultBackground,calendar:[2,4,6,8,10,12,14,16,18,20,22,24,26],favorites:[1,2],user:defaultUser,createdDecks:[],deckDraft:{title:"",description:"",isPublic:false,suggestions:true,cards:[blankDraftCard()]}};
+const defaultState={route:"home",lastOpenedTab:"decks",streak:7,today:146,minutes:42,xp:2340,quizIndex:0,quizScore:0,quizAnswered:null,quickQuiz:defaultQuickQuiz,flashIndex:0,activeCreatedDeck:null,activeCreatedFolder:"",detailCardIndex:0,detailFlipped:false,detailMode:"flashcard",detailSearch:"",detailFilter:"all",detailSort:"original",detailProgress:{},detailStars:{},deckStudyStats:{},studyCountCompletionOnlyV1:false,learnOrder:[],learnIndex:0,learnOptions:[],learnAnswered:null,learnCorrect:0,learnUnknown:0,learnCompleted:0,learnSessionStats:blankLearnSessionStats(),learnSettings:defaultLearnSettings,excelQuiz:defaultExcelQuiz,inputData:defaultInputData,theme:"dark",dailyGoal:30,notifications:true,background:defaultBackground,calendar:[2,4,6,8,10,12,14,16,18,20,22,24,26],favorites:[1,2],user:defaultUser,createdDecks:[],deckDraft:{title:"",description:"",isPublic:false,suggestions:true,cards:[blankDraftCard()]}};
 const googleClientId=document.querySelector('meta[name="google-signin-client_id"]')?.content?.trim()||"";
 const freshDefaultState=()=>JSON.parse(JSON.stringify(defaultState));
 const storedState=JSON.parse(localStorage.getItem("hvq-state")||"{}");
@@ -88,6 +88,7 @@ if(state.inputData.savedSheet==="NhapLieu")state.inputData.mergeRows=false;
 // Dữ liệu cũ trước đây được tự động chuyển vào Gmail chính dưới đây, không còn hiện ở Khách/Gmail khác.
 const HVQ_OWNER_EMAIL="buivantoan1998@gmail.com";
 const HVQ_PERSONAL_SCOPE_VERSION="v7";
+const HVQ_OWNER_DEFAULT_EXCEL_SOURCE="https://docs.google.com/spreadsheets/d/188bSTqmXvvU55ht8yJt-wlIwfP3mLiOhebhEStcAwvw/edit?gid=421247814#gid=421247814";
 
 // ===== HVQ CLOUD SYNC CONFIG =====
 // Để máy tính và điện thoại dùng chung thư mục/bộ thẻ theo Gmail:
@@ -99,7 +100,7 @@ const HVQ_CLOUD_SYNC_URL="https://script.google.com/macros/s/AKfycbz6vt-7sjdo1sW
 const HVQ_CLOUD_SYNC_APP="hanvietquiz";
 const HVQ_PERSONAL_FIELDS=[
   "activeCreatedDeck","activeCreatedFolder","detailCardIndex","detailFlipped","detailMode","detailSearch","detailFilter","detailSort",
-  "detailProgress","detailStars","deckStudyStats","learnOrder","learnIndex","learnOptions","learnAnswered","learnCorrect","learnUnknown",
+  "detailProgress","detailStars","deckStudyStats","studyCountCompletionOnlyV1","learnOrder","learnIndex","learnOptions","learnAnswered","learnCorrect","learnUnknown",
   "learnCompleted","learnSessionStats","learnSettings","excelQuiz","quickQuiz","inputData","deckDraft","editingDeckIndex","flashIndex"
 ];
 function hvqClone(value){return JSON.parse(JSON.stringify(value))}
@@ -108,11 +109,18 @@ function hvqNormalizedEmail(value=""){return String(value||"").trim().toLowerCas
 function hvqAccountKeyFromEmail(email){email=hvqNormalizedEmail(email);return email?`gmail:${email}`:"guest"}
 function hvqCurrentAccountKey(){return state.user?.signedIn?hvqAccountKeyFromEmail(state.user.email):"guest"}
 function hvqOwnerAccountKey(){return hvqAccountKeyFromEmail(HVQ_OWNER_EMAIL)}
+function hvqApplyOwnerExcelDefault(){
+  if(hvqNormalizedEmail(state.user?.email)!==HVQ_OWNER_EMAIL)return false;
+  state.excelQuiz={...defaultExcelQuiz,...(state.excelQuiz||{})};
+  if(String(state.excelQuiz.sourceUrl||"").trim())return false;
+  state.excelQuiz.sourceUrl=HVQ_OWNER_DEFAULT_EXCEL_SOURCE;
+  return true;
+}
 function hvqPersonalStateKey(accountKey=hvqCurrentAccountKey()){return `hvq-personal-state::${accountKey}`}
 function hvqPersonalDecksKey(accountKey=hvqCurrentAccountKey()){return `createdDecks::${accountKey}`}
 function hvqBlankPersonalState(){return {
   activeCreatedDeck:null,activeCreatedFolder:"",detailCardIndex:0,detailFlipped:false,detailMode:"flashcard",detailSearch:"",detailFilter:"all",detailSort:"original",
-  detailProgress:{},detailStars:{},deckStudyStats:{},learnOrder:[],learnIndex:0,learnOptions:[],learnAnswered:null,learnCorrect:0,learnUnknown:0,
+  detailProgress:{},detailStars:{},deckStudyStats:{},studyCountCompletionOnlyV1:false,learnOrder:[],learnIndex:0,learnOptions:[],learnAnswered:null,learnCorrect:0,learnUnknown:0,
   learnCompleted:0,learnSessionStats:blankLearnSessionStats(),learnSettings:hvqClone(defaultLearnSettings),excelQuiz:hvqClone(defaultExcelQuiz),quickQuiz:hvqClone(defaultQuickQuiz),
   inputData:hvqClone(defaultInputData),deckDraft:hvqClone(defaultState.deckDraft),editingDeckIndex:null,flashIndex:0
 }}
@@ -165,6 +173,7 @@ async function hvqLoadCurrentAccountPersonalData(){
   hvqApplyPersonalState(personal);
   try{const decks=await idbGet(hvqPersonalDecksKey(accountKey));state.createdDecks=Array.isArray(decks)?decks:[]}catch{state.createdDecks=[]}
   if(!Array.isArray(state.createdDecks))state.createdDecks=[];
+  hvqApplyOwnerExcelDefault();
 }
 function hvqSaveCurrentAccountPersonalData(){
   const accountKey=hvqCurrentAccountKey();
@@ -243,6 +252,7 @@ async function hvqCloudApplySnapshot(snapshot,reason="load"){
   hvqCloudApplyingRemote=true;
   try{
     hvqApplyPersonalState(snapshot.personal||{});
+    hvqApplyOwnerExcelDefault();
     state.createdDecks=Array.isArray(snapshot.createdDecks)?snapshot.createdDecks:[];
     await idbSet(hvqPersonalDecksKey(),state.createdDecks||[]);
     try{localStorage.setItem(hvqPersonalStateKey(),JSON.stringify(hvqCollectPersonalStateFrom(state)))}catch{}
@@ -1498,7 +1508,8 @@ function ensureHomeLearningStyle(){
     .hvq-home-progress-track{flex:1;height:8px;border-radius:999px;background:#e5e7eb;overflow:hidden}
     .hvq-home-progress-fill{height:100%;border-radius:999px;background:#000;min-width:0}
     .hvq-home-progress-text{font-size:18px;font-weight:950;color:#111827;white-space:nowrap}
-    .hvq-home-study-time{font-size:15.5px;color:#6b7280;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:7px}
+    .hvq-home-study-time{font-size:15.5px;color:#6b7280;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+    .hvq-home-study-count{display:inline-flex;align-items:center;gap:6px;padding-left:10px;margin-left:3px;border-left:1px solid #d1d5db;white-space:nowrap}
     .hvq-home-deck-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px}
     .hvq-home-pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;background:#f3f4f6;color:#6b7280;padding:8px 13px;font-size:14.5px;font-weight:800;max-width:56%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .hvq-home-empty-card{flex:0 0 min(360px,82vw)}
@@ -1571,7 +1582,7 @@ function openQuickReviewLatestDeck(){
     state.activeCreatedDeck=item.index;
     state.flashIndex=startIndex;
     state.route="practice";
-    touchDeckStudyStats(item.index,{increment:true,lastCardIndex:startIndex});
+    touchDeckStudyStats(item.index,{increment:false,lastCardIndex:startIndex});
     save();
     render();
     setTimeout(()=>selectPractice("flashcard"),0);
@@ -1595,7 +1606,7 @@ function openQuickQuizLatestDeck(){
     state.quizAnswered=null;
     state.quickQuiz={...defaultQuickQuiz,deckIndex:item.index};
     state.route="practice";
-    touchDeckStudyStats(item.index,{increment:true,lastCardIndex:0});
+    touchDeckStudyStats(item.index,{increment:false,lastCardIndex:0});
     save();
     render();
     setTimeout(()=>selectPractice("quiz"),0);
@@ -1656,13 +1667,13 @@ function homeLearningDeckCards(){
       <div class="hvq-home-deck-bottom"><span class="hvq-home-pill">0 từ</span><span class="hvq-home-pill">${icon("user-round")} ${escapeHtml(user.name||"T- Creation")}</span></div>
     </article></div>`;
   }
-  return `<div class="hvq-home-deck-scroll">${items.map(({deck,index,total,done,lastStudiedAt})=>{
+  return `<div class="hvq-home-deck-scroll">${items.map(({deck,index,total,done,lastStudiedAt,studyCount})=>{
     const pct=total?Math.min(100,Math.round(done/total*100)):0;
     return `<article class="hvq-home-learning-card" data-created-deck="${index}">
       <h3 class="hvq-home-deck-title">${escapeHtml(deck.title||"Bộ từ chưa đặt tên")}</h3>
       <div class="hvq-home-deck-lang">${homeLearningDeckLanguage(deck,index)}</div>
       <div class="hvq-home-progress-row"><div class="hvq-home-progress-track"><div class="hvq-home-progress-fill" style="width:${pct}%"></div></div><span class="hvq-home-progress-text">${done}/${total}</span></div>
-      <div class="hvq-home-study-time">${icon("clock")} Học lần cuối: ${formatLastStudied(lastStudiedAt)}</div>
+      <div class="hvq-home-study-time"><span>${icon("clock")} Học lần cuối: ${formatLastStudied(lastStudiedAt)}</span><span class="hvq-home-study-count">${icon("repeat-2")} Đã học: ${studyCount} lần</span></div>
       <div class="hvq-home-deck-bottom"><span class="hvq-home-pill">${total} từ</span><span class="hvq-home-pill">${icon("user-round")} ${escapeHtml(user.name||"T- Creation")}</span></div>
     </article>`;
   }).join("")}</div>`;
@@ -1758,6 +1769,16 @@ function touchDeckStudyStats(index,{increment=false,lastCardIndex=null}={}){
   if(Number.isInteger(lastCardIndex))next.lastCardIndex=lastCardIndex;
   else if(Number.isInteger(prev.lastCardIndex))next.lastCardIndex=prev.lastCardIndex;
   state.deckStudyStats[key]=next;
+}
+function repairLegacyStudyCountOvercount(){
+  if(state.studyCountCompletionOnlyV1)return false;
+  let changed=false;
+  Object.values(state.deckStudyStats||{}).forEach(stats=>{
+    // Bản cũ có thể cộng cùng một phiên ở lúc mở bộ, mở chế độ học và lúc hoàn thành.
+    if(Number(stats?.studyCount)===3){stats.studyCount=1;changed=true}
+  });
+  state.studyCountCompletionOnlyV1=true;
+  return changed;
 }
 function formatLastStudied(value){
   if(!value)return "Chưa học";
@@ -2441,6 +2462,7 @@ function quizExcelPage(){
         <div class="section-title"><h2>${icon("sliders-horizontal")} Cài đặt học tập</h2></div>
         <div class="settings-section"><h3>Phạm vi học</h3>
           <div class="field excel-page-filter"><label>Trang</label><select class="input" data-excel-select="pageFilter"><option value="all">Tất cả trang</option>${pages.map(page=>`<option value="${escapeAttr(page)}" ${String(qz.pageFilter||"all")===String(page)?"selected":""}>Trang ${escapeHtml(page)}</option>`).join("")}</select></div>
+          <label class="setting-choice"><input type="checkbox" data-excel-setting="autoNextPage" ${qz.autoNextPage?"checked":""}><span>${icon("files")} Tự chuyển sang trang tiếp theo<small>Khi học hết câu của trang đang chọn, tự mở trang kế tiếp. Chỉ áp dụng khi chọn một trang cụ thể.</small></span></label>
           ${!pages.length&&qz.questions.length?`<button class="button small mt-2" data-action="excel-refresh-pages">${icon("refresh-cw")} Cập nhật trang</button><p class="setting-help">Dữ liệu này được nạp trước khi có bộ lọc trang. Hãy cập nhật để đọc lại cột trang.</p>`:""}
           <label class="setting-choice"><input type="checkbox" data-excel-setting="onlyStarred" ${qz.onlyStarred?"checked":""}><span>${icon("star")} Chỉ học câu đánh dấu sao (${starredCount} câu)<small>Gắn sao câu quan trọng để ôn riêng như bên bộ thẻ.</small></span></label>
           <label class="setting-choice"><input type="checkbox" data-excel-setting="onlyWrong" ${qz.onlyWrong?"checked":""}><span>${icon("circle-x")} Chỉ học câu sai (${qz.wrongIds.length} câu)<small>Dùng danh sách câu đã trả lời sai trong lượt này.</small></span></label>
@@ -2481,7 +2503,7 @@ function excelQuestionCard(q,questions){
   return `<div class="card section-card excel-question-card">
     <div class="excel-question-head">
       <div class="excel-question-main">
-        <div class="excel-question-meta"><span class="pill">Câu ${qz.index+1}/${questions.length}</span><strong>${qz.score} điểm</strong></div>
+        <div class="excel-question-meta"><span class="pill">Câu ${qz.index+1}/${questions.length}</span><strong>${q.page?`Trang ${escapeHtml(q.page)}`:"Chưa rõ trang"}</strong></div>
         <h2>${formatExcelQuestion(q)}</h2>
       </div>
       <button type="button" class="excel-star-button ${starred?"starred":""}" data-excel-star="${escapeAttr(q.id)}" title="${starred?"Bỏ dấu sao":"Gắn dấu sao"}">${starred?"★":icon("star")}</button>
@@ -2581,7 +2603,7 @@ function ensureLearnSummaryStyle(){
 }
 
 const pageRenderers={home:homePage,courses:coursesPage,decks:decksPage,inputData:inputDataPage,createDeck:createDeckPage,deckDetail:deckDetailPage,learnSession:learnSessionPage,quizExcel:quizExcelPage,practice:practicePage,exam:examPage,community:communityPage,stats:statsPage,calendar:calendarPage,leaderboard:leaderboardPage,settings:settingsPage};
-function render(){rememberNavigation();applyBackgroundStyle();ensureLearnSummaryStyle();rememberLastOpenedTabFromRoute();document.body.classList.toggle("learn-mode",state.route==="learnSession");renderNav();renderUserUi();app.innerHTML=(pageRenderers[state.route]||homePage)();ensureFixedTopbar();applyCustomLogo();setTimeout(()=>{ensureFixedTopbar();applyCustomLogo()},0);window.scrollTo({top:0});}
+function render(){rememberNavigation();applyBackgroundStyle();ensureLearnSummaryStyle();rememberLastOpenedTabFromRoute();if(repairLegacyStudyCountOvercount())save();document.body.classList.toggle("learn-mode",state.route==="learnSession");renderNav();renderUserUi();app.innerHTML=(pageRenderers[state.route]||homePage)();ensureFixedTopbar();applyCustomLogo();setTimeout(()=>{ensureFixedTopbar();applyCustomLogo()},0);window.scrollTo({top:0});}
 
 document.addEventListener("click",e=>{
   const route=e.target.closest("[data-route]")?.dataset.route;if(route){
@@ -2616,7 +2638,7 @@ document.addEventListener("click",e=>{
     if(action==="excel-load-url"){loadExcelUrl();return}
     if(action==="excel-pick-file"){pickExcelFile();return}
     if(action==="excel-load-sample"){loadExcelSample();return}
-    if(action==="excel-clear"){state.excelQuiz={...defaultExcelQuiz};save();render();showToast("Đã xóa dữ liệu quiz");return}
+    if(action==="excel-clear"){state.excelQuiz={...defaultExcelQuiz};hvqApplyOwnerExcelDefault();save();render();showToast("Đã xóa dữ liệu quiz");return}
     if(action==="excel-parse-paste"){loadExcelText(state.excelQuiz.pasteData,"Dữ liệu đã dán");return}
     if(action==="excel-restart"){restartExcelQuiz();return}
     if(action==="excel-next-question"){nextExcelQuestion();return}
@@ -2788,6 +2810,21 @@ function excelActiveQuestions(){
   return base;
 }
 function excelPages(){return [...new Set((state.excelQuiz.questions||[]).map(q=>q.page).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true}))}
+function excelQuestionsForPage(page){
+  const qz=state.excelQuiz;
+  let base=(qz.questions||[]).filter(q=>String(q.page||"")===String(page));
+  if(qz.onlyStarred)base=base.filter(q=>(qz.starredIds||[]).includes(q.id));
+  if(qz.onlyWrong)base=base.filter(q=>(qz.wrongIds||[]).includes(q.id));
+  if(qz.onlyUnmastered)base=base.filter(q=>!(qz.correctIds||[]).includes(q.id));
+  return base;
+}
+function excelNextAvailablePage(){
+  const current=String(state.excelQuiz.pageFilter||"all");
+  if(current==="all")return null;
+  const pages=excelPages(),index=pages.findIndex(page=>String(page)===current);
+  if(index<0)return null;
+  return pages.slice(index+1).find(page=>excelQuestionsForPage(page).length)||null;
+}
 function parseDelimitedText(text){
   const raw=String(text||"").replace(/\r\n/g,"\n").replace(/\r/g,"\n").trim();if(!raw)return[];
   const firstLine=raw.split("\n",1)[0]||"",delimiter=firstLine.includes("\t")?"\t":firstLine.includes(";")&&!firstLine.includes(",")?";":",",rows=[];let row=[],cell="",quoted=false;
@@ -2932,8 +2969,13 @@ function loadExcelSample(){const sample=`Trang\tCâu hỏi\tĐáp án\tSai 1\tSa
 8\t勉強 thường hiểu là gì?\tHọc tập, nỗ lực\tKinh tế\tXã hội\tTự nhiên`;state.excelQuiz.pasteData=sample;loadExcelText(sample,"Dữ liệu mẫu")}
 function refreshExcelPages(){if(state.excelQuiz.pasteData?.trim()){loadExcelText(state.excelQuiz.pasteData,state.excelQuiz.sourceName||"Dữ liệu đã dán");return}if(state.excelQuiz.sourceUrl?.trim()){loadExcelUrl();return}showToast("Hãy tải lại Google Sheet hoặc dán dữ liệu để đọc trang","circle-alert")}
 function restartExcelQuiz(renderPage=true){const qz=state.excelQuiz;state.excelQuiz={...qz,questions:qz.shuffle?shuffled(qz.questions):qz.questions,index:0,score:0,answered:null};save();if(renderPage)render()}
-function answerExcelQuestion(answerIndex){const questions=excelActiveQuestions(),q=questions[state.excelQuiz.index%questions.length];if(!q||state.excelQuiz.answered!==null)return;state.excelQuiz.answered=answerIndex;const correct=answerIndex===q.answerIndex;if(correct){state.excelQuiz.score+=10;state.xp+=10;state.today++;state.excelQuiz.correctIds=[...new Set([...(state.excelQuiz.correctIds||[]),q.id])];state.excelQuiz.wrongIds=(state.excelQuiz.wrongIds||[]).filter(id=>id!==q.id);showToast("Chính xác! +10 XP")}else{state.excelQuiz.wrongIds=[...new Set([...(state.excelQuiz.wrongIds||[]),q.id])];state.excelQuiz.correctIds=(state.excelQuiz.correctIds||[]).filter(id=>id!==q.id);showToast("Chưa đúng, xem đáp án nhé","circle-x")}save();render();if(correct&&state.excelQuiz.autoAdvance)setTimeout(()=>{if(state.route==="quizExcel"&&state.excelQuiz.answered!==null)nextExcelQuestion()},700)}
-function nextExcelQuestion(){const questions=excelActiveQuestions();if(!questions.length)return;if(state.excelQuiz.index+1>=questions.length){showToast(`Hoàn thành lượt quiz: ${state.excelQuiz.score} điểm`,"party-popper");restartExcelQuiz();return}state.excelQuiz.index++;state.excelQuiz.answered=null;save();render()}
+function renderExcelKeepingScroll(){
+  const top=window.scrollY||document.documentElement.scrollTop||0;
+  render();
+  requestAnimationFrame(()=>window.scrollTo(0,top));
+}
+function answerExcelQuestion(answerIndex){const questions=excelActiveQuestions(),q=questions[state.excelQuiz.index%questions.length];if(!q||state.excelQuiz.answered!==null)return;state.excelQuiz.answered=answerIndex;const correct=answerIndex===q.answerIndex;if(correct){state.excelQuiz.score+=10;state.xp+=10;state.today++;state.excelQuiz.correctIds=[...new Set([...(state.excelQuiz.correctIds||[]),q.id])];state.excelQuiz.wrongIds=(state.excelQuiz.wrongIds||[]).filter(id=>id!==q.id);showToast("Chính xác! +10 XP")}else{state.excelQuiz.wrongIds=[...new Set([...(state.excelQuiz.wrongIds||[]),q.id])];state.excelQuiz.correctIds=(state.excelQuiz.correctIds||[]).filter(id=>id!==q.id);showToast("Chưa đúng, xem đáp án nhé","circle-x")}save();renderExcelKeepingScroll();if(correct&&state.excelQuiz.autoAdvance)setTimeout(()=>{if(state.route==="quizExcel"&&state.excelQuiz.answered!==null)nextExcelQuestion()},700)}
+function nextExcelQuestion(){const questions=excelActiveQuestions();if(!questions.length)return;if(state.excelQuiz.index+1>=questions.length){const nextPage=state.excelQuiz.autoNextPage?excelNextAvailablePage():null;if(nextPage!==null){state.excelQuiz.pageFilter=String(nextPage);state.excelQuiz.index=0;state.excelQuiz.answered=null;save();renderExcelKeepingScroll();showToast(`Đã chuyển sang trang ${nextPage}`,"files");return}showToast(`Hoàn thành lượt quiz: ${state.excelQuiz.score} điểm`,"party-popper");restartExcelQuiz();return}state.excelQuiz.index++;state.excelQuiz.answered=null;save();renderExcelKeepingScroll()}
 function excelCurrentQuestion(){const questions=excelActiveQuestions();return questions[state.excelQuiz.index%Math.max(questions.length,1)]}
 function excelIsStarred(id){return (state.excelQuiz.starredIds||[]).includes(id)}
 function toggleExcelStar(questionId=excelCurrentQuestion()?.id){if(!questionId)return;const ids=state.excelQuiz.starredIds||[];state.excelQuiz.starredIds=ids.includes(questionId)?ids.filter(id=>id!==questionId):[...ids,questionId];save();render();showToast(state.excelQuiz.starredIds.includes(questionId)?"Đã gắn dấu sao":"Đã bỏ dấu sao")}
@@ -3059,7 +3101,7 @@ function createDecksFromInputCards(cards,settings){
   return decks;
 }
 async function applyInputDataSettings(){const d=state.inputData,canonicalUrl=savedInputSheets[d.savedSheet]||d.sheetUrl;const validSingle=[d.termCol,d.meaningCol,d.synonymCol].filter(Boolean).every(x=>columnSpecValid(x,false)),validExample=columnSpecValid(d.exampleCol,true);if(!validSingle||!validExample){showToast("Cột phải có dạng A hoặc nhiều cột như F,I","circle-alert");return}const next={...d,sheetUrl:canonicalUrl,termCol:normalizeColumnSpec(d.termCol),meaningCol:normalizeColumnSpec(d.meaningCol),exampleCol:normalizeColumnSpec(d.exampleCol),synonymCol:normalizeColumnSpec(d.synonymCol),folderSize:Math.max(1,Number(d.folderSize)||50),selected:true,lastAppliedAt:new Date().toISOString()};state.inputData=next;let rows=[];try{if(next.sourceType==="sheet"&&next.sheetUrl?.trim()){showToast(`Đang tải ${next.savedSheet}...`,"download");const info=googleSheetInfo(next.sheetUrl);if(info)rows=parseDelimitedText(await loadGoogleSheetText(info))}}catch{showToast("Không tải được Google Sheet nhập liệu","circle-alert")}const cards=cardsFromInputData(rows,false);if(cards.length){const decks=createDecksFromInputCards(cards,next),rowCount=Math.max(0,rows.length-1);state.inputData.lastResult={title:"Đã tạo thư mục bộ thẻ",message:`Đã đọc ${rowCount} dòng và tạo ${cards.length} thẻ từ ${next.savedSheet}. Trong tab Đã tạo sẽ có thư mục “${next.savedSheet}”, bên trong là ${decks.length} bộ từ.`,cards:cards.length,folders:1};state.route="decks";save();render();showToast(`Đã tạo ${decks.length} bộ từ ${cards.length} thẻ`);return}state.inputData.lastResult={title:"Chưa tạo được bộ thẻ",message:`Không đọc được dữ liệu từ ${next.savedSheet||"nguồn nhập liệu"}. Hãy kiểm tra sheet đang chọn, quyền chia sẻ hoặc cột thuật ngữ.`};save();render();showToast("Chưa tạo được bộ thẻ","circle-alert")}
-function startCreatedDeck(index){const deck=state.createdDecks[index];if(!deck?.cards?.length){showToast("Bộ thẻ chưa có nội dung","circle-alert");return}touchDeckStudyStats(index,{increment:true});closeModal();state.activeCreatedDeck=index;state.flashIndex=0;state.route="practice";save();render()}
+function startCreatedDeck(index){const deck=state.createdDecks[index];if(!deck?.cards?.length){showToast("Bộ thẻ chưa có nội dung","circle-alert");return}touchDeckStudyStats(index,{increment:false});closeModal();state.activeCreatedDeck=index;state.flashIndex=0;state.route="practice";save();render()}
 function openCreatedDeckDetail(index){const deck=state.createdDecks[index];if(!deck?.cards?.length){showToast("Bộ thẻ chưa có nội dung","circle-alert");return}closeModal();state.activeCreatedDeck=index;state.detailCardIndex=0;state.detailFlipped=false;state.detailMode="flashcard";state.detailSearch="";state.detailFilter="all";state.route="deckDetail";save();render()}
 function resetDeckSessionProgress(index=state.activeCreatedDeck){
   const prefix=`${index}:`;
