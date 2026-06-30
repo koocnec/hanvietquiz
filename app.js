@@ -2509,7 +2509,7 @@ function excelQuestionCard(q,questions){
       <button type="button" class="excel-star-button ${starred?"starred":""}" data-excel-star="${escapeAttr(q.id)}" title="${starred?"Bỏ dấu sao":"Gắn dấu sao"}">${starred?"★":icon("star")}</button>
     </div>
     <div class="excel-options">${q.options.map((option,i)=>`<button class="quiz-option ${isAnswered&&i===q.answerIndex?"correct":""} ${qz.answered===i&&i!==q.answerIndex?"wrong":""}" data-excel-answer="${i}" ${isAnswered?"disabled":""}>${i+1}. ${escapeHtml(option)}</button>`).join("")}</div>
-    ${isAnswered?`<div class="learn-feedback">${qz.answered===q.answerIndex?"Chính xác!":"Đáp án đúng: "+escapeHtml(q.answer)}${qz.answered!==q.answerIndex?excelAiExplanationHtml(q,qz.answered):""}</div><button class="button primary mt-4" data-action="excel-next-question">${qz.index+1>=questions.length?"Hoàn thành":"Câu tiếp theo"}</button>`:""}
+    ${isAnswered?`<div class="excel-answer-result"><div class="learn-feedback">${qz.answered===q.answerIndex?"Chính xác!":"Đáp án đúng: "+escapeHtml(q.answer)}${qz.answered!==q.answerIndex?excelAiExplanationHtml(q,qz.answered):""}</div><button class="button primary mt-4" data-action="excel-next-question">${qz.index+1>=questions.length?"Hoàn thành":"Câu tiếp theo"}</button></div>`:""}
   </div>`;
 }
 function formatExcelQuestion(q){
@@ -2979,12 +2979,30 @@ function renderExcelQuestionOnly(){
   const q=questions[state.excelQuiz.index%Math.max(questions.length,1)];
   const card=document.querySelector(".excel-question-card");
   if(!card||!q)return false;
-  card.outerHTML=excelQuestionCard(q,questions);
+  const template=document.createElement("template");
+  template.innerHTML=excelQuestionCard(q,questions).trim();
+  const nextCard=template.content.firstElementChild;
+  if(!nextCard)return false;
+  card.innerHTML=nextCard.innerHTML;
   const pageSelect=document.querySelector('[data-excel-select="pageFilter"]');
   if(pageSelect)pageSelect.value=String(state.excelQuiz.pageFilter||"all");
   return true;
 }
-function answerExcelQuestion(answerIndex){const questions=excelActiveQuestions(),q=questions[state.excelQuiz.index%questions.length];if(!q||state.excelQuiz.answered!==null)return;state.excelQuiz.answered=answerIndex;const correct=answerIndex===q.answerIndex;if(correct){state.excelQuiz.score+=10;state.xp+=10;state.today++;state.excelQuiz.correctIds=[...new Set([...(state.excelQuiz.correctIds||[]),q.id])];state.excelQuiz.wrongIds=(state.excelQuiz.wrongIds||[]).filter(id=>id!==q.id);showToast("Chính xác! +10 XP")}else{state.excelQuiz.wrongIds=[...new Set([...(state.excelQuiz.wrongIds||[]),q.id])];state.excelQuiz.correctIds=(state.excelQuiz.correctIds||[]).filter(id=>id!==q.id);showToast("Chưa đúng, xem đáp án nhé","circle-x")}save();if(!renderExcelQuestionOnly())renderExcelKeepingScroll();if(correct&&state.excelQuiz.autoAdvance)setTimeout(()=>{if(state.route==="quizExcel"&&state.excelQuiz.answered!==null)nextExcelQuestion()},700)}
+function renderExcelAnswerOnly(q,questions){
+  const card=document.querySelector(".excel-question-card");
+  if(!card)return false;
+  const top=window.scrollY||document.documentElement.scrollTop||0,qz=state.excelQuiz;
+  card.querySelectorAll("[data-excel-answer]").forEach((button,i)=>{
+    button.disabled=true;
+    button.classList.toggle("correct",i===q.answerIndex);
+    button.classList.toggle("wrong",qz.answered===i&&i!==q.answerIndex);
+  });
+  card.querySelector(".excel-answer-result")?.remove();
+  card.insertAdjacentHTML("beforeend",`<div class="excel-answer-result"><div class="learn-feedback">${qz.answered===q.answerIndex?"Chính xác!":"Đáp án đúng: "+escapeHtml(q.answer)}${qz.answered!==q.answerIndex?excelAiExplanationHtml(q,qz.answered):""}</div><button class="button primary mt-4" data-action="excel-next-question">${qz.index+1>=questions.length?"Hoàn thành":"Câu tiếp theo"}</button></div>`);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>window.scrollTo(0,top)));
+  return true;
+}
+function answerExcelQuestion(answerIndex){const questions=excelActiveQuestions(),q=questions[state.excelQuiz.index%questions.length];if(!q||state.excelQuiz.answered!==null)return;state.excelQuiz.answered=answerIndex;const correct=answerIndex===q.answerIndex;if(correct){state.excelQuiz.score+=10;state.xp+=10;state.today++;state.excelQuiz.correctIds=[...new Set([...(state.excelQuiz.correctIds||[]),q.id])];state.excelQuiz.wrongIds=(state.excelQuiz.wrongIds||[]).filter(id=>id!==q.id);showToast("Chính xác! +10 XP")}else{state.excelQuiz.wrongIds=[...new Set([...(state.excelQuiz.wrongIds||[]),q.id])];state.excelQuiz.correctIds=(state.excelQuiz.correctIds||[]).filter(id=>id!==q.id);showToast("Chưa đúng, xem đáp án nhé","circle-x")}save();if(!renderExcelAnswerOnly(q,questions)&&!renderExcelQuestionOnly())renderExcelKeepingScroll();if(correct&&state.excelQuiz.autoAdvance)setTimeout(()=>{if(state.route==="quizExcel"&&state.excelQuiz.answered!==null)nextExcelQuestion()},700)}
 function nextExcelQuestion(){const questions=excelActiveQuestions();if(!questions.length)return;if(state.excelQuiz.index+1>=questions.length){const nextPage=state.excelQuiz.autoNextPage?excelNextAvailablePage():null;if(nextPage!==null){state.excelQuiz.pageFilter=String(nextPage);state.excelQuiz.index=0;state.excelQuiz.answered=null;save();if(!renderExcelQuestionOnly())renderExcelKeepingScroll();showToast(`Đã chuyển sang trang ${nextPage}`,"files");return}showToast(`Hoàn thành lượt quiz: ${state.excelQuiz.score} điểm`,"party-popper");restartExcelQuiz();return}state.excelQuiz.index++;state.excelQuiz.answered=null;save();if(!renderExcelQuestionOnly())renderExcelKeepingScroll()}
 function excelCurrentQuestion(){const questions=excelActiveQuestions();return questions[state.excelQuiz.index%Math.max(questions.length,1)]}
 function excelIsStarred(id){return (state.excelQuiz.starredIds||[]).includes(id)}
