@@ -190,6 +190,7 @@ let hvqCloudApplyingRemote=false;
 let hvqCloudPushTimer=null;
 let hvqCloudLastPayloadHash="";
 let hvqCloudLastStatus="local";
+let hvqCloudPullConfirmed=false;
 function hvqCloudEnabled(){return !!String(HVQ_CLOUD_SYNC_URL||"").trim()}
 function hvqCloudLocalStampKey(accountKey=hvqCurrentAccountKey()){return `hvq-cloud-updated-at::${accountKey}`}
 function hvqCloudLastSyncKey(accountKey=hvqCurrentAccountKey()){return `hvq-cloud-last-sync-at::${accountKey}`}
@@ -222,7 +223,7 @@ function hvqCloudSimpleHash(text=""){
   let h=0;for(let i=0;i<text.length;i++)h=((h<<5)-h+text.charCodeAt(i))|0;
   return `${text.length}:${h}`;
 }
-function hvqCloudJsonp(params={},timeoutMs=9000){
+function hvqCloudJsonp(params={},timeoutMs=45000){
   return new Promise((resolve,reject)=>{
     const callbackName=`hvqCloudCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const script=document.createElement("script");
@@ -269,6 +270,7 @@ async function hvqCloudPullAndApply(reason="auto"){
   const localHasData=hvqCloudHasLocalData();
   try{
     const response=await hvqCloudJsonp({action:"load",app:HVQ_CLOUD_SYNC_APP,email:state.user.email,ownerEmail:HVQ_OWNER_EMAIL});
+    hvqCloudPullConfirmed=true;
     const snapshot=hvqCloudNormalizeSnapshot(response);
     if(snapshot&&snapshot.updatedAt){
       const cloudIsNewer=!localStamp||snapshot.updatedAt>localStamp;
@@ -286,6 +288,7 @@ async function hvqCloudPullAndApply(reason="auto"){
     if(localHasData)hvqCloudSchedulePush("first-upload");
     return false;
   }catch(err){
+    hvqCloudPullConfirmed=false;
     hvqCloudLastStatus="offline";
     console.warn("HVQ cloud sync load failed",err);
     if(reason!=="init")showToast("Chưa tải được dữ liệu cloud, app vẫn dùng dữ liệu máy này","wifi-off");
@@ -293,7 +296,7 @@ async function hvqCloudPullAndApply(reason="auto"){
   }
 }
 function hvqCloudSchedulePush(reason="auto"){
-  if(!hvqCloudReady||hvqCloudApplyingRemote||!hvqCloudEnabled()||!state.user?.signedIn||!state.user?.email)return;
+  if(!hvqCloudReady||!hvqCloudPullConfirmed||hvqCloudApplyingRemote||!hvqCloudEnabled()||!state.user?.signedIn||!state.user?.email)return;
   clearTimeout(hvqCloudPushTimer);
   hvqCloudPushTimer=setTimeout(()=>hvqCloudPushNow(reason),1400);
 }

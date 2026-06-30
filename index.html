@@ -6,12 +6,9 @@
   <meta name="google-signin-client_id" content="85827665948-c2a22slp6oivnrj0bia61bftjknv0ecq.apps.googleusercontent.com">
   <title>HQ</title>
   <style>
-    #appBootSplash{display:none}
-    @media(max-width:640px){
-      #appBootSplash{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;width:100%;height:100vh;height:100dvh;background:#05080d;opacity:1;visibility:visible;transition:opacity .24s ease,visibility .24s ease}
-      #appBootSplash img{display:block;width:96px;height:96px;object-fit:contain}
-      body.hvq-app-ready #appBootSplash{opacity:0;visibility:hidden;pointer-events:none}
-    }
+    #appBootSplash{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;width:100%;height:100vh;height:100dvh;background:#05080d;opacity:1;visibility:visible;transition:opacity .24s ease,visibility .24s ease}
+    #appBootSplash img{display:block;width:96px;height:96px;object-fit:contain}
+    body.hvq-app-ready #appBootSplash{opacity:0;visibility:hidden;pointer-events:none}
   </style>
   <!-- App icon điện thoại - FIX v2: dùng file mới để tránh iPhone giữ cache icon chữ H -->
   <meta name="theme-color" content="#111111">
@@ -32,7 +29,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="./assets/hq-phone-icon-180-v2.png">
   <link rel="apple-touch-icon-precomposed" sizes="180x180" href="./assets/hq-phone-icon-180-v2.png">
 
-  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="manifest" href="./manifest.webmanifest?v=mobile-splash-v3">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
@@ -98,6 +95,6 @@
     </header>
   </template>
 
-  <script src="./app.js?v=mobile-centered-splash-v1"></script>
+  <script src="./app.js?v=cloud-safe-restore-v1"></script>
 </body>
 </html>
