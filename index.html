@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="google-signin-client_id" content="85827665948-c2a22slp6oivnrj0bia61bftjknv0ecq.apps.googleusercontent.com">
   <title>HQ</title>
+  <style>
+    #appBootSplash{display:none}
+    @media(max-width:640px){
+      #appBootSplash{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;width:100%;height:100vh;height:100dvh;background:#05080d;opacity:1;visibility:visible;transition:opacity .24s ease,visibility .24s ease}
+      #appBootSplash img{display:block;width:96px;height:96px;object-fit:contain}
+      body.hvq-app-ready #appBootSplash{opacity:0;visibility:hidden;pointer-events:none}
+    }
+  </style>
   <!-- App icon điện thoại - FIX v2: dùng file mới để tránh iPhone giữ cache icon chữ H -->
   <meta name="theme-color" content="#111111">
   <meta name="mobile-web-app-capable" content="yes">
@@ -33,6 +41,9 @@
   <link rel="stylesheet" href="./styles.css?v=learn-exit-button-v1">
 </head>
 <body>
+  <div id="appBootSplash" role="status" aria-label="Đang tải HanVietQuiz">
+    <img src="./assets/hq-logo-nw.png" alt="HanVietQuiz">
+  </div>
   <div id="toast" class="toast"><span id="toastIcon" class="iconify text-indigo-400" data-icon="lucide:check-circle"></span><span id="toastText"></span></div>
 
   <div id="modal" class="modal-overlay" aria-hidden="true">
@@ -87,6 +98,6 @@
     </header>
   </template>
 
-  <script src="./app.js?v=mobile-excel-stable-answer-v2"></script>
+  <script src="./app.js?v=mobile-centered-splash-v1"></script>
 </body>
 </html>

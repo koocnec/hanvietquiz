@@ -3303,7 +3303,13 @@ document.querySelector("#profileMenu").innerHTML=`<button class="dropdown-item" 
 document.querySelector("#searchButton").onclick=()=>modal("Tìm kiếm nhanh",`<input id="globalSearch" class="input" autofocus placeholder="Tìm khóa học, bộ từ, từ vựng..."><div class="search-results">${decks.slice(0,3).map(d=>`<button class="dropdown-item" data-deck="${d.id}">${d.icon} ${d.name}</button>`).join("")}</div>`);
 document.addEventListener("click",e=>{if(!e.target.closest("#notificationButton")&&!e.target.closest("#notificationMenu"))document.querySelector("#notificationMenu")?.classList.remove("show");if(!e.target.closest("#profileButton")&&!e.target.closest("#profileMenu"))document.querySelector("#profileMenu")?.classList.remove("show");if(!e.target.closest("#hvqQuickBackgroundButton")&&!e.target.closest("#hvqQuickBackgroundPanel"))closeQuickBackgroundPanel()});
 
-async function initApp(){await hvqMigrateLegacyPersonalDataToOwner();await hvqLoadCurrentAccountPersonalData();await hvqCloudPullAndApply("init");hvqCloudReady=true;save();render();setTimeout(applyCustomLogo,0)}
+function finishBootSplash(){
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    document.body.classList.add("hvq-app-ready");
+    setTimeout(()=>document.querySelector("#appBootSplash")?.remove(),300);
+  }));
+}
+async function initApp(){try{await hvqMigrateLegacyPersonalDataToOwner();await hvqLoadCurrentAccountPersonalData();await hvqCloudPullAndApply("init");hvqCloudReady=true;save();render();setTimeout(applyCustomLogo,0)}finally{finishBootSplash()}}
 initApp();
 
 (function injectAiShortExplainStyle(){
