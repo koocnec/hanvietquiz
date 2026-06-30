@@ -18,16 +18,16 @@ const topRoutes=[
 const mainRoutes=["home","courses","decks","quizExcel","practice","exam","community"];
 const toolRoutes=["stats","calendar","leaderboard","settings"];
 const decks=[
-  {id:1,name:"Hàn Việt cơ bản",term:"基礎漢越",total:200,learned:156,newCount:12,icon:"🎯"},
+  {id:1,name:"Hán Việt cơ bản",term:"基礎漢越",total:200,learned:156,newCount:12,icon:"🎯"},
   {id:2,name:"TOPIK II từ vựng",term:"TOPIK II",total:500,learned:287,newCount:25,icon:"🇰🇷"},
-  {id:3,name:"Thành ngữ Hàn Việt",term:"成語",total:150,learned:89,newCount:8,icon:"📚"},
+  {id:3,name:"Thành ngữ Hán Việt",term:"成語",total:150,learned:89,newCount:8,icon:"📚"},
   {id:4,name:"Chữ Hán theo chủ đề",term:"主題漢字",total:300,learned:134,newCount:18,icon:"🏷️"},
-  {id:5,name:"Hàn Việt giao tiếp",term:"交際",total:180,learned:45,newCount:30,icon:"💬"},
+  {id:5,name:"Hán Việt giao tiếp",term:"交際",total:180,learned:45,newCount:30,icon:"💬"},
   {id:6,name:"Từ vựng N3",term:"N3語彙",total:400,learned:210,newCount:15,icon:"🇯🇵"}
 ];
 const courses=[
-  {id:1,name:"Hàn Việt TOPIK II - Khóa đầy đủ",level:"Trung cấp",lessons:48,done:31,icon:"🇰🇷"},
-  {id:2,name:"250 thành ngữ Hàn Việt thông dụng",level:"Cơ bản → Nâng cao",lessons:30,done:12,icon:"📚"},
+  {id:1,name:"Hán Việt TOPIK II - Khóa đầy đủ",level:"Trung cấp",lessons:48,done:31,icon:"🇰🇷"},
+  {id:2,name:"250 thành ngữ Hán Việt thông dụng",level:"Cơ bản → Nâng cao",lessons:30,done:12,icon:"📚"},
   {id:3,name:"Chữ Hán theo chủ đề hàng ngày",level:"Sơ cấp",lessons:60,done:8,icon:"🏷️"}
 ];
 const words=[
@@ -39,7 +39,7 @@ const words=[
   {term:"自然",reading:"Tự nhiên",meaning:"Thế giới không do con người tạo ra"}
 ];
 const quizQuestions=[
-  {q:"經濟 có âm Hàn Việt là gì?",options:["Kinh tế","Văn hóa","Xã hội","Tự nhiên"],answer:0},
+  {q:"經濟 có âm Hán Việt là gì?",options:["Kinh tế","Văn hóa","Xã hội","Tự nhiên"],answer:0},
   {q:"社會 nghĩa là gì?",options:["Học tập","Xã hội","Kinh tế","Văn hóa"],answer:1},
   {q:"Chữ nào mang nghĩa “văn hóa”?",options:["自然","學習","文化","經濟"],answer:2}
 ];
@@ -1348,100 +1348,8 @@ function openLastStudyTab(){
 }
 function routeTo(route){if(!routes[route])route="home";if(route!=="home")rememberLastOpenedTabFromRoute(route);state.route=route;save();render()}
 
-function visibleHanVietText(value=""){
-  return String(value||"")
-    .replace(/Hán Việt/gi,"Hàn Việt")
-    .replace(/HánViệt/g,"HànViệt")
-    .replace(/âm Hán Việt/gi,"âm Hàn Việt");
-}
-function createdDeckDisplayTitle(deck){
-  return visibleHanVietText(deck?.title||"Bộ từ chưa đặt tên");
-}
-function createdDeckDisplaySubtitle(deck,index){
-  const info=createdDeckProgressInfo(index);
-  return `${escapeHtml(visibleHanVietText(createdFolderName(deck)))} · ${info.done}/${info.total}`;
-}
-function deckLanguageInfoFromDeck(deck,index=null){
-  const cards=Array.isArray(deck?.cards)?deck.cards:[];
-  if(!cards.length)return {code:"vn",label:"Tiếng Việt"};
-  const stats=Number.isInteger(index)?getDeckStudyStats(index):{};
-  const preferredIndex=Number.isInteger(stats?.lastCardIndex)?stats.lastCardIndex:0;
-  const safeIndex=Math.max(0,Math.min(preferredIndex,cards.length-1));
-  const ordered=[...cards.slice(safeIndex),...cards.slice(0,safeIndex)];
-  const card=ordered.find(c=>cleanInputText(c?.definition))||ordered.find(c=>cleanInputText(c?.synonyms))||ordered.find(c=>cleanInputText(c?.term))||ordered.find(c=>cleanInputText(c?.example))||cards[0];
-  const sample=cleanInputText(card?.definition)||cleanInputText(card?.synonyms)||cleanInputText(card?.term)||cleanInputText(card?.example)||"";
-  return hvqDetectLanguageLabel(sample);
-}
-function createdDeckIconHtml(deck,index){
-  const lang=deckLanguageInfoFromDeck(deck,index);
-  return `<span class="item-icon hvq-real-data-flag">${hvqFlagIconHtml(lang.code,lang.label)}</span>`;
-}
-function realDeckListItems(limit=99){
-  const created=Array.isArray(state.createdDecks)?state.createdDecks:[];
-  return created.map((deck,index)=>{
-    const info=createdDeckProgressInfo(index);
-    const stats=getDeckStudyStats(index);
-    const total=info.total||0;
-    const remaining=Math.max(total-info.done,0);
-    const sortDate=stats.lastStudiedAt||deck.updatedAt||deck.createdAt||"";
-    return {deck,index,info,total,remaining,sortDate,studyCount:Number(stats.studyCount)||0};
-  }).filter(x=>x.total>0)
-    .sort((a,b)=>String(b.sortDate||"").localeCompare(String(a.sortDate||""))||b.studyCount-a.studyCount||String(createdDeckDisplayTitle(a.deck)).localeCompare(String(createdDeckDisplayTitle(b.deck)),"vi",{numeric:true}))
-    .slice(0,limit);
-}
-function deckCards(limit=99){
-  const items=realDeckListItems(limit);
-  if(!items.length)return `<p class="empty card">Chưa có dữ liệu thật. Hãy tạo bộ thẻ hoặc vào tab Nhập liệu để thêm dữ liệu.</p>`;
-  return `<div class="deck-grid">${items.map(({deck,index,info,remaining})=>`<article class="card card-hover deck-card created-progress-card" data-created-deck="${index}"><div class="flex justify-between items-start"><span class="text-xl">${createdDeckIconHtml(deck,index)}</span><span class="pill">${remaining?`${remaining} mới`:"Đang ôn lại"}</span></div><h3>${escapeHtml(createdDeckDisplayTitle(deck))}</h3><p>${createdDeckDisplaySubtitle(deck,index)}</p><div class="mt-3">${progress(info.percent)}</div><div class="flex justify-between items-center mt-2"><small class="muted">${info.percent}%</small><button class="button small" data-study-created="${index}">Học</button></div></article>`).join("")}</div>`
-}
-function realCourseRows(limit=3){
-  const created=Array.isArray(state.createdDecks)?state.createdDecks:[];
-  const groups=createdDeckFolderGroups(created).map(group=>{
-    let totalCards=0,doneCards=0,studiedDecks=0,lastStudiedAt="",langInfo={code:"vn",label:"Tiếng Việt"};
-    group.items.forEach(({deck,index},pos)=>{
-      const info=createdDeckProgressInfo(index);
-      totalCards+=info.total;
-      doneCards+=info.done;
-      if(info.done>0||info.studyCount>0||info.lastStudiedAt)studiedDecks++;
-      const sortDate=info.lastStudiedAt||deck.updatedAt||deck.createdAt||"";
-      if(String(sortDate)>String(lastStudiedAt))lastStudiedAt=sortDate;
-      if(pos===0)langInfo=deckLanguageInfoFromDeck(deck,index);
-    });
-    const percent=totalCards?Math.min(100,Math.round(doneCards/totalCards*100)):0;
-    return {...group,totalCards,doneCards,studiedDecks,lastStudiedAt,percent,langInfo};
-  }).filter(g=>g.totalCards>0)
-    .sort((a,b)=>String(b.lastStudiedAt||"").localeCompare(String(a.lastStudiedAt||""))||b.percent-a.percent||String(a.name||"").localeCompare(String(b.name||""),"vi",{numeric:true}))
-    .slice(0,limit);
-  if(!groups.length)return `<p class="empty card">Chưa có lộ trình thật. Hãy nhập dữ liệu hoặc tạo bộ thẻ để hiển thị ở đây.</p>`;
-  return groups.map(group=>`<article class="card card-hover course-row" data-open-created-folder="${escapeAttr(group.name)}"><span class="item-icon hvq-real-data-flag">${hvqFlagIconHtml(group.langInfo.code,group.langInfo.label)}</span><div class="row-main"><h3>${escapeHtml(visibleHanVietText(group.name))}</h3><p>${group.studiedDecks}/${group.items.length} bộ · ${group.doneCards}/${group.totalCards} thẻ</p><div class="mt-2">${progress(group.percent)}</div></div><strong class="text-indigo-400">${group.percent}%</strong></article>`).join("");
-}
-function courseRows(){return realCourseRows(3)}
-function homeContinueStudyRows(){
-  const items=homeLearningDeckItems().slice(0,3);
-  if(!items.length)return `<p class="empty">Chưa có bộ từ đang học. Hãy tạo hoặc nhập dữ liệu trước.</p>`;
-  return items.map(({deck,index,total,done})=>{
-    const remaining=Math.max(total-done,0);
-    return `<div class="list-row card-hover" data-created-deck="${index}"><span class="item-icon hvq-real-data-flag">${createdDeckIconHtml(deck,index)}</span><div class="row-main"><strong>${escapeHtml(createdDeckDisplayTitle(deck))}</strong><small>${remaining?`Còn ${remaining} từ cần học`:`Đang ôn lại toàn bộ`}</small></div>${icon("chevron-right")}</div>`;
-  }).join("");
-}
-function homeWordOfTheDayData(){
-  const item=latestHomeLearningDeckItem()||realDeckListItems(1)[0]||null;
-  if(!item)return null;
-  const deck=item.deck,index=item.index,cards=Array.isArray(deck?.cards)?deck.cards:[];
-  if(!cards.length)return null;
-  let cardIndex=cards.findIndex((_,i)=>state.detailProgress?.[`${index}:${i}`]!=="mastered");
-  if(cardIndex<0)cardIndex=Number.isInteger(getDeckStudyStats(index)?.lastCardIndex)?Math.min(Math.max(getDeckStudyStats(index).lastCardIndex,0),cards.length-1):0;
-  const card=cards[cardIndex]||cards[0]||{};
-  const term=cleanInputText(card.term)||"Chưa có từ";
-  const reading=cleanInputText(card.pronunciation)||cleanInputText(card.synonyms)||visibleHanVietText(createdDeckDisplayTitle(deck));
-  const meaning=homeDefinitionPreviewText(cleanInputText(card.definition)||cleanInputText(card.example)||cleanInputText(card.synonyms)||"Chưa có định nghĩa");
-  return {term,reading,meaning};
-}
-function homeWordOfTheDayCard(){
-  const data=homeWordOfTheDayData();
-  if(!data)return `<div class="text-center"><div class="text-2xl font-bold text-indigo-300">Chưa có dữ liệu</div><p class="mt-3 muted text-sm">Hãy tạo hoặc nhập bộ thẻ để hiển thị từ hôm nay.</p></div>`;
-  return `<div class="text-center"><div class="text-5xl font-bold text-indigo-400">${escapeHtml(data.term)}</div><p class="mt-3 font-semibold">${escapeHtml(data.reading)}</p><p class="muted text-sm">${escapeHtml(data.meaning)}</p><button class="button small mt-4" data-speak="${escapeAttr(data.term)}">${icon("volume-2")} Nghe</button></div>`;
-}
+function deckCards(limit=99){return `<div class="deck-grid">${decks.slice(0,limit).map(d=>{const pct=Math.round(d.learned/d.total*100);return `<article class="card card-hover deck-card" data-deck="${d.id}"><div class="flex justify-between"><span class="text-xl">${d.icon}</span><span class="pill">${d.newCount} mới</span></div><h3>${d.name}</h3><p>${d.term} · ${d.learned}/${d.total}</p><div class="mt-3">${progress(pct)}</div><div class="flex justify-between items-center mt-2"><small class="muted">${pct}%</small><button class="button small" data-study="${d.id}">Học</button></div></article>`}).join("")}</div>`}
+function courseRows(){return courses.map(c=>{const pct=Math.round(c.done/c.lessons*100);return `<article class="card card-hover course-row" data-course="${c.id}"><span class="item-icon">${c.icon}</span><div class="row-main"><h3>${c.name}</h3><p>${c.level} · ${c.done}/${c.lessons} bài</p><div class="mt-2">${progress(pct)}</div></div><strong class="text-indigo-400">${pct}%</strong></article>`}).join("")}
 
 function homeActivityStats(){
   const created=Array.isArray(state.createdDecks)?state.createdDecks:[];
@@ -1505,22 +1413,11 @@ function ensureHomeLearningStyle(){
     .hvq-home-route-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:2px}
     .hvq-home-route-head h2{margin:0;font-size:23px;font-weight:950;color:#f8fafc;letter-spacing:-.02em}
     .hvq-home-route-head button{border:0;background:transparent;color:#cbd5e1;font-size:17px;font-weight:800;cursor:pointer}
-    .hvq-home-title-row{display:flex;align-items:center;justify-content:space-between;gap:14px;min-width:0}
-    .hvq-home-mobile-account{display:none}
     body.hvq-custom-bg .hvq-home-section-head h2,body.hvq-custom-bg .hvq-home-route-head h2{color:#f8fafc}
     body:not(.hvq-custom-bg) .hvq-home-section-head h2,body:not(.hvq-custom-bg) .hvq-home-route-head h2{color:#f8fafc}
     @media(max-width:640px){
       .grid-dashboard{display:block!important}
       .grid-dashboard>.stack{margin-bottom:20px}
-      .page-header.hvq-home-header{display:block!important}
-      .hvq-home-title-row{width:100%}
-      .hvq-home-title-row h1{font-size:24px;line-height:1.2}
-      .hvq-home-mobile-account{display:inline-flex;align-items:center;justify-content:center;gap:7px;flex:0 0 auto;min-height:40px;padding:0 13px;border:1px solid rgba(148,163,184,.28);border-radius:999px;background:rgba(17,24,39,.82);color:#f8fafc;font-size:13px;font-weight:800;box-shadow:0 8px 22px rgba(0,0,0,.18);cursor:pointer}
-      .hvq-home-mobile-account .iconify{font-size:16px}
-      .hvq-home-mobile-account.signed-in{width:42px;height:42px;min-height:42px;padding:3px}
-      .hvq-home-mobile-account .avatar{width:34px;height:34px}
-      .hvq-home-header-actions{margin-top:18px}
-      .hvq-home-header-actions [data-action="sign-in-google"]{display:none!important}
       .hvq-home-learning-wrap{gap:16px}
       .hvq-home-learning-actions{gap:12px}
       .hvq-home-learning-actions .button{min-height:54px;border-radius:15px;font-size:16px;padding:0 12px}
@@ -1685,11 +1582,7 @@ function ensureInlineFlagStyle(){
   if(document.querySelector("#hvqInlineFlagStyle"))return;
   const style=document.createElement("style");
   style.id="hvqInlineFlagStyle";
-  style.textContent=`
-    .hvq-inline-flag{display:inline-block;width:18px;height:13px;object-fit:cover;vertical-align:-2px;border-radius:2px;margin-right:6px;box-shadow:0 0 0 1px rgba(255,255,255,.12)}
-    .hvq-real-data-flag{display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px}
-    .hvq-real-data-flag .hvq-inline-flag{width:22px;height:16px;margin-right:0;vertical-align:0;border-radius:3px}
-  `;
+  style.textContent=`.hvq-inline-flag{display:inline-block;width:18px;height:13px;object-fit:cover;vertical-align:-2px;border-radius:2px;margin-right:6px;box-shadow:0 0 0 1px rgba(255,255,255,.12)}`;
   document.head.appendChild(style);
 }
 
@@ -1697,22 +1590,19 @@ function homePage(){ensureInlineFlagStyle();
   ensureHomeLearningStyle();
   const user=currentUser(),firstName=user.name.split(/\s+/).filter(Boolean).slice(-1)[0]||user.name;
   const loginAction=user.signedIn?"":button(`${icon("log-in")} Đăng nhập Google`,"sign-in-google");
-  const mobileAccount=user.signedIn
-    ?`<button type="button" class="hvq-home-mobile-account signed-in" data-route="settings" aria-label="Mở hồ sơ ${escapeAttr(user.name)}">${userAvatar(user)}</button>`
-    :`<button type="button" class="hvq-home-mobile-account" data-action="sign-in-google">${icon("log-in")}<span>Đăng nhập</span></button>`;
   const real=homeActivityStats();
-  return `<header class="page-header hvq-home-header"><div class="hvq-home-title-row"><div><h1>Xin chào, ${escapeHtml(firstName)} 👋</h1></div>${mobileAccount}</div><div class="hvq-home-header-actions flex flex-wrap gap-2">${loginAction+button(`${icon("rotate-ccw")} Ôn tập nhanh`,"review")+button(`${icon("play")} Học ngay`,"study","primary")}</div></header>`+
+  return header(`Xin chào, ${escapeHtml(firstName)} 👋`,"",loginAction+button(`${icon("rotate-ccw")} Ôn tập nhanh`,"review")+button(`${icon("play")} Học ngay`,"study","primary"))+
   `<div class="grid-dashboard">
     <div class="stack">
       <section class="card section-card"><div class="section-title"><h2>${icon("activity")} Hoạt động học tập</h2></div><div class="stats-grid"><div class="stat"><strong class="text-indigo-400">${real.studied}</strong><small>Thẻ đã học</small></div><div class="stat"><strong class="text-emerald-400">${real.mastered}</strong><small>Đã thuộc</small></div></div><div class="mt-4"><div class="flex justify-between text-xs mb-2"><span>Tiến độ bộ thẻ tự tạo</span><span>${real.percentText}</span></div>${progress(real.percent)}</div></section>
     </div>
     <div class="stack">
       ${homeLearningSection()}
-      <section><div class="section-title"><h2>${icon("graduation-cap")} Lộ trình đang học</h2><button class="button small" data-route="courses">Xem tất cả</button></div><div class="stack gap-3">${courseRows()}</div></section>
+      <section><div class="section-title"><h2>${icon("graduation-cap")} Khóa đang học</h2><button class="button small" data-route="courses">Xem tất cả</button></div><div class="stack gap-3">${courseRows()}</div></section>
     </div>
     <div class="stack">
-      <section class="card section-card"><div class="section-title"><h2>${icon("play-circle")} Tiếp tục học</h2></div>${homeContinueStudyRows()}</section>
-      <section class="card section-card"><div class="section-title"><h2>${icon("sparkles")} Từ mới hôm nay</h2></div>${homeWordOfTheDayCard()}</section>
+      <section class="card section-card"><div class="section-title"><h2>${icon("play-circle")} Tiếp tục học</h2></div>${decks.slice(0,3).map(d=>`<div class="list-row card-hover" data-study="${d.id}"><span class="item-icon">${d.icon}</span><div class="row-main"><strong>${d.name}</strong><small>Còn ${d.newCount} từ mới</small></div>${icon("chevron-right")}</div>`).join("")}</section>
+      <section class="card section-card"><div class="section-title"><h2>${icon("sparkles")} Từ mới hôm nay</h2></div><div class="text-center"><div class="text-5xl font-bold text-indigo-400">勉強</div><p class="mt-3 font-semibold">Miện cường</p><p class="muted text-sm">Học tập, nỗ lực</p><button class="button small mt-4" data-speak="勉強">${icon("volume-2")} Nghe</button></div></section>
       <section class="card section-card"><div class="section-title"><h2>${icon("zap")} Công cụ nhanh</h2></div><div class="grid grid-cols-2 gap-2">${button("Flashcard","flashcard")}${button("Quiz nhanh","quiz")}${button("Tra từ","dictionary")}${button("Thống kê","stats")}</div></section>
     </div>
   </div>`;
@@ -1814,7 +1704,7 @@ function decksPage(){
     return header("Đã tạo",`Thư mục ${escapeHtml(activeFolder)} · ${items.length} bộ`,actions)+`<section class="mb-7"><div class="section-title"><h2>${icon("folder-open")} ${escapeHtml(activeFolder)}</h2><button class="button small" data-action="back-to-folders">${icon("arrow-left")} Quay lại thư mục</button></div>${createdDeckToolbar(items.length)}<div id="createdDeckResults">${createdDeckGrid(items)}</div></section>`;
   }
   const sortedGroups=sortCreatedFolders(groups,"name-asc");
-  return header("Đã tạo","Quản lý các thư mục và bộ thẻ của bạn.",actions)+`${groups.length?`<section class="mb-7"><div class="section-title"><h2>${icon("folder")} Thư mục của tôi</h2><span class="pill">${groups.length} thư mục · ${created.length} bộ</span></div>${createdFolderToolbar()}<div id="createdFolderResults"><div class="deck-grid">${sortedGroups.map(createdFolderCard).join("")}</div></div></section>`:""}<div class="flex gap-3 mb-5"><input id="deckSearch" class="input" placeholder="Tìm bộ từ..."><select id="deckSort" class="input max-w-[180px]"><option value="name">Theo tên</option><option value="progress">Theo tiến độ</option></select></div><div id="deckResults">${deckCards()}</div>`;
+  return header("Đã tạo","Quản lý các thư mục và bộ thẻ của bạn.",actions)+`${groups.length?`<section class="mb-7"><div class="section-title"><h2>${icon("folder")} Thư mục của tôi</h2><span class="pill">${groups.length} thư mục · ${created.length} bộ</span></div>${createdFolderToolbar()}<div id="createdFolderResults"><div class="deck-grid">${sortedGroups.map(createdFolderCard).join("")}</div></div></section>`:""}<div class="flex gap-3 mb-5"><input id="deckSearch" class="input" placeholder="Tìm bộ từ mẫu..."><select id="deckSort" class="input max-w-[180px]"><option value="name">Theo tên</option><option value="progress">Theo tiến độ</option></select></div><div id="deckResults">${deckCards()}</div>`;
 }
 function inputDataPage(){
   const d=state.inputData,sheets=Object.keys(savedInputSheets);
@@ -2531,9 +2421,9 @@ function longestCommonPrefix(values){
   for(const value of values.slice(1)){while(prefix&&!value.startsWith(prefix))prefix=prefix.slice(0,-1)}
   return prefix;
 }
-function dictionaryPanel(){return `<div class="card section-card max-w-3xl"><div class="flex gap-2"><input id="dictionaryInput" class="input" placeholder="Nhập chữ Hán, âm Hàn Việt hoặc nghĩa..."><button class="button primary" data-action="lookup">Tra từ</button></div><div id="dictionaryResults" class="search-results"><p class="empty">Nhập từ khóa để bắt đầu tra cứu.</p></div></div>`}
-function examPage(){return header("Luyện thi","Mô phỏng bài thi với giới hạn thời gian và kết quả chi tiết.",button("Bắt đầu đề mới","start-exam","primary"))+`<div class="grid md:grid-cols-3 gap-4">${[["TOPIK II · Từ vựng","50 câu","60 phút"],["Hàn Việt tổng hợp","40 câu","45 phút"],["Thành ngữ nâng cao","30 câu","30 phút"]].map((e,i)=>`<article class="card section-card card-hover"><span class="pill">Đề ${i+1}</span><h2 class="mt-4">${e[0]}</h2><p class="muted text-sm my-3">${e[1]} · ${e[2]}</p>${progress([65,30,0][i])}<button class="button primary w-full mt-5" data-exam="${i}">${i===2?"Bắt đầu":"Làm tiếp"}</button></article>`).join("")}</div>`}
-function communityPage(){return header("Cộng đồng","Chia sẻ thành tích, hỏi đáp và học cùng nhau.",button(`${icon("plus")} Đăng bài`,"new-post","primary"))+`<div class="grid lg:grid-cols-[1fr_320px] gap-5"><div id="feed" class="stack">${["Mẹo nhớ 20 từ Hàn Việt theo bộ thủ","Mình vừa hoàn thành chuỗi học 30 ngày!","Ai đang ôn TOPIK II cùng mình?"].map((t,i)=>`<article class="card section-card"><div class="flex gap-3"><span class="avatar">${["TH","QB","LP"][i]}</span><div><strong>${["Thu Hà","Quốc Bảo","Lan Phương"][i]}</strong><p class="muted text-xs">Khoảng ${i+1} giờ trước</p></div></div><h2 class="text-base mt-4">${t}</h2><p class="muted text-sm">Cùng trao đổi kinh nghiệm học và ghi nhớ từ vựng hiệu quả nhé.</p><div class="flex gap-2 mt-4"><button class="button small" data-like="${i}">${icon("heart")} <span>${12+i*7}</span></button><button class="button small" data-comment="${i}">${icon("message-circle")} Bình luận</button></div></article>`).join("")}</div><aside class="card section-card h-fit"><h2 class="text-sm">Chủ đề nổi bật</h2>${["#TOPIKII","#HànViệtMỗiNgày","#ThànhNgữ","#HọcCùngNhau"].map(x=>`<button class="dropdown-item" data-topic="${x}">${x}</button>`).join("")}</aside></div>`}
+function dictionaryPanel(){return `<div class="card section-card max-w-3xl"><div class="flex gap-2"><input id="dictionaryInput" class="input" placeholder="Nhập chữ Hán, âm Hán Việt hoặc nghĩa..."><button class="button primary" data-action="lookup">Tra từ</button></div><div id="dictionaryResults" class="search-results"><p class="empty">Nhập từ khóa để bắt đầu tra cứu.</p></div></div>`}
+function examPage(){return header("Luyện thi","Mô phỏng bài thi với giới hạn thời gian và kết quả chi tiết.",button("Bắt đầu đề mới","start-exam","primary"))+`<div class="grid md:grid-cols-3 gap-4">${[["TOPIK II · Từ vựng","50 câu","60 phút"],["Hán Việt tổng hợp","40 câu","45 phút"],["Thành ngữ nâng cao","30 câu","30 phút"]].map((e,i)=>`<article class="card section-card card-hover"><span class="pill">Đề ${i+1}</span><h2 class="mt-4">${e[0]}</h2><p class="muted text-sm my-3">${e[1]} · ${e[2]}</p>${progress([65,30,0][i])}<button class="button primary w-full mt-5" data-exam="${i}">${i===2?"Bắt đầu":"Làm tiếp"}</button></article>`).join("")}</div>`}
+function communityPage(){return header("Cộng đồng","Chia sẻ thành tích, hỏi đáp và học cùng nhau.",button(`${icon("plus")} Đăng bài`,"new-post","primary"))+`<div class="grid lg:grid-cols-[1fr_320px] gap-5"><div id="feed" class="stack">${["Mẹo nhớ 20 từ Hán Việt theo bộ thủ","Mình vừa hoàn thành chuỗi học 30 ngày!","Ai đang ôn TOPIK II cùng mình?"].map((t,i)=>`<article class="card section-card"><div class="flex gap-3"><span class="avatar">${["TH","QB","LP"][i]}</span><div><strong>${["Thu Hà","Quốc Bảo","Lan Phương"][i]}</strong><p class="muted text-xs">Khoảng ${i+1} giờ trước</p></div></div><h2 class="text-base mt-4">${t}</h2><p class="muted text-sm">Cùng trao đổi kinh nghiệm học và ghi nhớ từ vựng hiệu quả nhé.</p><div class="flex gap-2 mt-4"><button class="button small" data-like="${i}">${icon("heart")} <span>${12+i*7}</span></button><button class="button small" data-comment="${i}">${icon("message-circle")} Bình luận</button></div></article>`).join("")}</div><aside class="card section-card h-fit"><h2 class="text-sm">Chủ đề nổi bật</h2>${["#TOPIKII","#HánViệtMỗiNgày","#ThànhNgữ","#HọcCùngNhau"].map(x=>`<button class="dropdown-item" data-topic="${x}">${x}</button>`).join("")}</aside></div>`}
 function statsPage(){const vals=[32,48,41,75,62,91,state.today];return header("Thống kê","Xem xu hướng học tập và điểm cần cải thiện.",button("Xuất báo cáo","export-stats"))+`<div class="stats-grid md:grid-cols-4 mb-5">${[["Tổng câu","2.840"],["Độ chính xác","78%"],["Thời gian","18,4 giờ"],["XP",state.xp.toLocaleString()]].map(x=>`<div class="card stat"><strong>${x[1]}</strong><small>${x[0]}</small></div>`).join("")}</div><section class="card section-card"><h2 class="text-sm">Hoạt động 7 ngày</h2><div class="chart">${vals.map(v=>`<div class="bar" style="height:${Math.max(18,v/1.6)}%"><span>${v}</span></div>`).join("")}</div></section>`}
 function calendarPage(){const days=Array.from({length:30},(_,i)=>i+1);return header("Lịch học","Lên kế hoạch và duy trì nhịp học đều đặn.",button(`${icon("plus")} Thêm lịch`,"add-schedule","primary"))+`<section class="card section-card"><div class="grid grid-cols-7 gap-2">${["T2","T3","T4","T5","T6","T7","CN"].map(x=>`<div class="text-center muted text-xs">${x}</div>`).join("")}${days.map(d=>`<button class="aspect-square rounded-xl border ${state.calendar.includes(d)?"border-indigo-500 bg-indigo-500/20":"border-white/5 bg-white/[.02]"}" data-calendar-day="${d}"><strong>${d}</strong>${state.calendar.includes(d)?'<small class="block text-[9px] text-indigo-300">Học</small>':""}</button>`).join("")}</div></section>`}
 function leaderboardPage(){const me=currentUser(),myName=me.signedIn?me.name:"Bạn";const users=[["Trung Kiên",4820],["Thu Hà",2190],[myName,state.xp,true],["Quốc Bảo",1950],["Lan Phương",1820]];return header("Bảng xếp hạng","Thi đua tích cực cùng cộng đồng mỗi tuần.")+`<div class="card section-card max-w-3xl">${users.sort((a,b)=>b[1]-a[1]).map((u,i)=>`<div class="list-row ${u[2]?"bg-indigo-500/10 rounded-xl":""}"><strong class="w-8 text-center">${i<3?["🥇","🥈","🥉"][i]:i+1}</strong>${u[2]?userAvatar(me):`<span class="avatar">${initials(u[0])}</span>`}<div class="row-main"><strong>${escapeHtml(u[0])} ${u[2]?"(bạn)":""}</strong></div><strong>${u[1].toLocaleString()} XP</strong></div>`).join("")}</div>`}
@@ -2542,7 +2432,7 @@ function settingsPage(){
   const syncInfo=hvqCloudEnabled()?`Cloud sync: ${hvqCloudLastStatus==="synced"?"đã bật":"đang chờ"}`:"Cloud sync: chưa cấu hình";
   const settingsActions=user.signedIn?button(`${icon("cloud")} Đồng bộ ngay`,"sync-cloud-now","primary")+button(`${icon("log-out")} Đăng xuất`,"sign-out"):button(`${icon("log-in")} Đăng nhập Google`,"sign-in-google","primary");
   return header("Cài đặt",`Tùy chỉnh trải nghiệm học tập của bạn. ${syncInfo}`,settingsActions)+
-  `<form id="settingsForm" class="card section-card max-w-3xl"><div class="profile-settings-head">${userAvatar(user)}<div><strong>${escapeHtml(user.name)}</strong><small>${escapeHtml(user.email||"Chưa đăng nhập Google")}</small></div></div><div class="form-grid"><div class="field"><label>Tên hiển thị</label><input name="name" class="input" value="${escapeAttr(user.name)}" ${user.signedIn?"readonly":""}></div><div class="field"><label>Mục tiêu mỗi ngày</label><input name="dailyGoal" type="number" min="5" max="500" class="input" value="${state.dailyGoal}"></div><div class="field"><label>Giao diện</label><select name="theme" class="input"><option value="dark" ${state.theme==="dark"?"selected":""}>Tối</option><option value="midnight" ${state.theme==="midnight"?"selected":""}>Midnight</option></select></div><div class="field"><label>Thông báo học tập</label><select name="notifications" class="input"><option value="true">Bật</option><option value="false" ${!state.notifications?"selected":""}>Tắt</option></select></div><div class="field full"><label>Giới thiệu</label><textarea class="input" rows="4">Đang chinh phục TOPIK II và từ Hàn Việt.</textarea></div></div><div class="flex gap-2 mt-5"><button class="button primary" type="submit">Lưu cài đặt</button><button class="button danger" type="button" data-action="reset-data">Đặt lại dữ liệu</button></div></form>
+  `<form id="settingsForm" class="card section-card max-w-3xl"><div class="profile-settings-head">${userAvatar(user)}<div><strong>${escapeHtml(user.name)}</strong><small>${escapeHtml(user.email||"Chưa đăng nhập Google")}</small></div></div><div class="form-grid"><div class="field"><label>Tên hiển thị</label><input name="name" class="input" value="${escapeAttr(user.name)}" ${user.signedIn?"readonly":""}></div><div class="field"><label>Mục tiêu mỗi ngày</label><input name="dailyGoal" type="number" min="5" max="500" class="input" value="${state.dailyGoal}"></div><div class="field"><label>Giao diện</label><select name="theme" class="input"><option value="dark" ${state.theme==="dark"?"selected":""}>Tối</option><option value="midnight" ${state.theme==="midnight"?"selected":""}>Midnight</option></select></div><div class="field"><label>Thông báo học tập</label><select name="notifications" class="input"><option value="true">Bật</option><option value="false" ${!state.notifications?"selected":""}>Tắt</option></select></div><div class="field full"><label>Giới thiệu</label><textarea class="input" rows="4">Đang chinh phục TOPIK II và từ Hán Việt.</textarea></div></div><div class="flex gap-2 mt-5"><button class="button primary" type="submit">Lưu cài đặt</button><button class="button danger" type="button" data-action="reset-data">Đặt lại dữ liệu</button></div></form>
   <section class="card section-card max-w-3xl mt-5">
     <div class="section-title"><h2>${icon("image")} Hình nền trang web</h2><span class="pill">OpenQuiz style</span></div>
     <div class="form-grid">
@@ -2926,7 +2816,7 @@ async function loadGoogleSheetText(info){
 async function loadExcelUrl(){const url=state.excelQuiz.sourceUrl.trim();if(!url){showToast("Hãy nhập link Google Sheet hoặc CSV","circle-alert");return}try{showToast("Đang tải dữ liệu...","download");const sheet=googleSheetInfo(url);if(sheet){loadExcelText(await loadGoogleSheetJsonp(sheet),"Google Sheet");return}const res=await fetch(url);if(!res.ok)throw new Error(`HTTP ${res.status}`);loadExcelText(await res.text(),"CSV URL")}catch(err){showToast("Không tải được dữ liệu. Hãy bật chia sẻ công khai hoặc thử tải CSV rồi nhập file.","circle-alert")}}
 function pickExcelFile(){const input=document.createElement("input");input.type="file";input.accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain";input.onchange=()=>{const file=input.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=()=>loadExcelText(reader.result,file.name);reader.readAsText(file,"utf-8")};input.click()}
 function loadExcelSample(){const sample=`Trang\tCâu hỏi\tĐáp án\tSai 1\tSai 2\tSai 3
-7\t經濟 có âm Hàn Việt là gì?\tKinh tế\tVăn hóa\tXã hội\tTự nhiên
+7\t經濟 có âm Hán Việt là gì?\tKinh tế\tVăn hóa\tXã hội\tTự nhiên
 7\t社會 nghĩa là gì?\tXã hội\tHọc tập\tKinh tế\tVăn hóa
 8\tChữ nào mang nghĩa văn hóa?\t文化\t自然\t學習\t經濟
 8\t勉強 thường hiểu là gì?\tHọc tập, nỗ lực\tKinh tế\tXã hội\tTự nhiên`;state.excelQuiz.pasteData=sample;loadExcelText(sample,"Dữ liệu mẫu")}
