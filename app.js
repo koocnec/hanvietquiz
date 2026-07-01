@@ -49,6 +49,7 @@ const defaultUser={name:"Khách",email:"",picture:"",sub:"",signedIn:false};
 const defaultBackground={mode:"preset",preset:"dotGrid",customUrl:"",opacity:1,overlay:0.08,blur:0};
 const defaultExcelQuiz={sourceUrl:"",pasteData:"",questions:[],index:0,score:0,answered:null,shuffle:true,autoAdvance:false,autoNextPage:false,onlyWrong:false,onlyStarred:false,onlyUnmastered:false,pageFilter:"all",wrongIds:[],starredIds:[],correctIds:[],sourceName:"Chưa có dữ liệu"};
 const defaultQuickQuiz={deckIndex:null,cardOrder:[],options:[],questionKey:""};
+const defaultTopikExam={examId:"37-reading",mode:"real",index:0,answers:{},starred:{},startedAt:null,submitted:false,score:0,feedbackQuestion:null};
 const blankLearnSessionStats=()=>({correctIds:[],wrongMap:{},wrongOrder:[],mode:"normal"});
 const savedInputSheets={
   "NhapLieu":"https://docs.google.com/spreadsheets/d/188bSTqmXvvU55ht8yJt-wlIwfP3mLiOhebhEStcAwvw/edit?gid=881137373#gid=881137373",
@@ -61,7 +62,7 @@ const savedInputColumns={
   "ngu phap":{termCol:"D",meaningCol:"E",exampleCol:"F",synonymCol:"G",mergeRows:true}
 };
 const defaultInputData={sourceType:"sheet",sheetUrl:savedInputSheets.NhapLieu,savedSheet:"NhapLieu",termCol:"B",meaningCol:"A",exampleCol:"C",synonymCol:"",autoDetect:true,mergeRows:false,folderSize:50,lastFileName:"",selected:true,lastAppliedAt:"",lastResult:null};
-const defaultState={route:"home",lastOpenedTab:"decks",streak:7,today:146,minutes:42,xp:2340,quizIndex:0,quizScore:0,quizAnswered:null,quickQuiz:defaultQuickQuiz,flashIndex:0,activeCreatedDeck:null,activeCreatedFolder:"",detailCardIndex:0,detailFlipped:false,detailMode:"flashcard",detailSearch:"",detailFilter:"all",detailSort:"original",detailProgress:{},detailStars:{},deckStudyStats:{},studyCountCompletionOnlyV1:false,learnOrder:[],learnIndex:0,learnOptions:[],learnAnswered:null,learnCorrect:0,learnUnknown:0,learnCompleted:0,learnSessionStats:blankLearnSessionStats(),learnSettings:defaultLearnSettings,excelQuiz:defaultExcelQuiz,inputData:defaultInputData,theme:"dark",dailyGoal:30,notifications:true,background:defaultBackground,calendar:[2,4,6,8,10,12,14,16,18,20,22,24,26],favorites:[1,2],user:defaultUser,createdDecks:[],deckDraft:{title:"",description:"",isPublic:false,suggestions:true,cards:[blankDraftCard()]}};
+const defaultState={route:"home",lastOpenedTab:"decks",streak:7,today:146,minutes:42,xp:2340,quizIndex:0,quizScore:0,quizAnswered:null,quickQuiz:defaultQuickQuiz,topikExam:defaultTopikExam,flashIndex:0,activeCreatedDeck:null,activeCreatedFolder:"",detailCardIndex:0,detailFlipped:false,detailMode:"flashcard",detailSearch:"",detailFilter:"all",detailSort:"original",detailProgress:{},detailStars:{},deckStudyStats:{},studyCountCompletionOnlyV1:false,learnOrder:[],learnIndex:0,learnOptions:[],learnAnswered:null,learnCorrect:0,learnUnknown:0,learnCompleted:0,learnSessionStats:blankLearnSessionStats(),learnSettings:defaultLearnSettings,excelQuiz:defaultExcelQuiz,inputData:defaultInputData,theme:"dark",dailyGoal:30,notifications:true,background:defaultBackground,calendar:[2,4,6,8,10,12,14,16,18,20,22,24,26],favorites:[1,2],user:defaultUser,createdDecks:[],deckDraft:{title:"",description:"",isPublic:false,suggestions:true,cards:[blankDraftCard()]}};
 const googleClientId=document.querySelector('meta[name="google-signin-client_id"]')?.content?.trim()||"";
 const freshDefaultState=()=>JSON.parse(JSON.stringify(defaultState));
 const storedState=JSON.parse(localStorage.getItem("hvq-state")||"{}");
@@ -76,6 +77,7 @@ state.learnSessionStats.wrongOrder=Array.isArray(state.learnSessionStats.wrongOr
 state.learnSessionStats.correctIds=Array.isArray(state.learnSessionStats.correctIds)?state.learnSessionStats.correctIds:[];
 state.excelQuiz={...defaultExcelQuiz,...(state.excelQuiz||{})};
 state.quickQuiz={...defaultQuickQuiz,...(state.quickQuiz||{})};
+state.topikExam={...defaultTopikExam,...(state.topikExam||{}),answers:{...((state.topikExam||{}).answers||{})},starred:{...((state.topikExam||{}).starred||{})}};
 state.quickQuiz.cardOrder=Array.isArray(state.quickQuiz.cardOrder)?state.quickQuiz.cardOrder:[];
 state.quickQuiz.options=Array.isArray(state.quickQuiz.options)?state.quickQuiz.options:[];
 state.inputData={...defaultInputData,...(state.inputData||{})};
@@ -2557,7 +2559,222 @@ function longestCommonPrefix(values){
   return prefix;
 }
 function dictionaryPanel(){return `<div class="card section-card max-w-3xl"><div class="flex gap-2"><input id="dictionaryInput" class="input" placeholder="Nhập chữ Hán, âm Hàn Việt hoặc nghĩa..."><button class="button primary" data-action="lookup">Tra từ</button></div><div id="dictionaryResults" class="search-results"><p class="empty">Nhập từ khóa để bắt đầu tra cứu.</p></div></div>`}
-function examPage(){return header("Luyện thi","Mô phỏng bài thi với giới hạn thời gian và kết quả chi tiết.",button("Bắt đầu đề mới","start-exam","primary"))+`<div class="grid md:grid-cols-3 gap-4">${[["TOPIK II · Từ vựng","50 câu","60 phút"],["Hàn Việt tổng hợp","40 câu","45 phút"],["Thành ngữ nâng cao","30 câu","30 phút"]].map((e,i)=>`<article class="card section-card card-hover"><span class="pill">Đề ${i+1}</span><h2 class="mt-4">${e[0]}</h2><p class="muted text-sm my-3">${e[1]} · ${e[2]}</p>${progress([65,30,0][i])}<button class="button primary w-full mt-5" data-exam="${i}">${i===2?"Bắt đầu":"Làm tiếp"}</button></article>`).join("")}</div>`}
+const TOPIK_OFFICIAL_STUDY_URL="https://www.topik.go.kr/TWSTDY/TWSTDY0100.do";
+const TOPIK_37_AUDIO_EMBED_URL="https://www.youtube-nocookie.com/embed/YsBHvz8yaJ4";
+function examPage(){
+  const officialCards=[
+    {level:"TOPIK I",title:"Đề thi TOPIK I chính thức",detail:"Nghe · Đọc",tone:"blue",icon:"headphones"},
+    {level:"TOPIK II",title:"Đề thi TOPIK II chính thức",detail:"Nghe · Viết · Đọc",tone:"violet",icon:"file-text"},
+    {level:"Tài liệu",title:"Đáp án và tài liệu nghe",detail:"Đáp án · Audio công bố kèm đề",tone:"green",icon:"volume-2"}
+  ];
+  return `<div class="official-exam-page">
+    <section class="official-exam-hero"><div><span class="official-kicker">KHO ĐỀ CHÍNH THỨC</span><h1>Luyện thi TOPIK</h1><p>Truy cập đề thi đã được NIIED công bố trên website TOPIK. Tài liệu được mở trực tiếp từ nguồn chính thức.</p></div><a class="button primary official-hero-button" href="${TOPIK_OFFICIAL_STUDY_URL}" target="_blank" rel="noopener noreferrer">${icon("external-link")} Mở kho đề TOPIK</a></section>
+    <section class="official-source-note">${icon("badge-check")}<div><strong>Nguồn: TOPIK – National Institute for International Education (NIIED)</strong><span>HanVietQuiz không lưu bản sao đề thi hoặc audio trên máy chủ. Nội dung và điều kiện sử dụng thuộc đơn vị phát hành.</span></div></section>
+    <div class="official-exam-toolbar"><div><h2>Chọn tài liệu</h2><p>Mỗi mục sẽ đưa bạn tới kho học tập chính thức của TOPIK.</p></div><div class="official-filter" aria-label="Loại đề"><span class="active">Tất cả</span><span>TOPIK I</span><span>TOPIK II</span></div></div>
+    <section class="topik37-exam-pack"><div class="topik37-pack-head"><div><span class="official-card-level">ĐỀ THI ĐÃ THÊM</span><h2>TOPIK II · Lần 37 · B형</h2><p>Chọn kỹ năng để mở đúng phần của đề PDF.</p></div><span class="topik37-source-badge">NIIED · TOPIK</span></div><div class="topik37-part-grid">
+      <a class="topik37-part listening" href="assets/topik37/topik37-listening.pdf#page=1" target="_blank" rel="noopener"><span>${icon("headphones")}</span><div><strong>Phần nghe</strong><small>50 câu · PDF đề nghe</small></div>${icon("arrow-up-right")}</a>
+      <a class="topik37-part writing" href="assets/topik37/topik37-full.pdf#page=15" target="_blank" rel="noopener"><span>${icon("pen-tool")}</span><div><strong>Phần viết</strong><small>Câu 51–54 · từ trang 15</small></div>${icon("arrow-up-right")}</a>
+      <button class="topik37-part reading" type="button" data-action="start-topik37-reading"><span>${icon("book-open")}</span><div><strong>Phần đọc</strong><small>50 câu · thi trực tiếp 70 phút</small></div>${icon("chevron-right")}</button>
+      <a class="topik37-part answers" href="assets/topik37/topik37-answers.pdf#page=1" target="_blank" rel="noopener"><span>${icon("check-circle")}</span><div><strong>Đáp án</strong><small>Nghe · Viết · Đọc</small></div>${icon("arrow-up-right")}</a>
+    </div></section>
+    <div class="official-exam-grid">${officialCards.map(card=>`<article class="official-exam-card ${card.tone}"><div class="official-card-icon">${icon(card.icon)}</div><span class="official-card-level">${card.level}</span><h3>${card.title}</h3><p>${card.detail}</p><a href="${TOPIK_OFFICIAL_STUDY_URL}" target="_blank" rel="noopener noreferrer">Xem tại TOPIK.go.kr ${icon("arrow-up-right")}</a></article>`).join("")}</div>
+    <section class="topik37-audio-card"><div class="topik37-audio-copy"><span class="official-card-level">TOPIK II · LẦN 37</span><h2>Phần nghe chính thức</h2><p>Phát audio trực tiếp từ YouTube. Bạn có thể tạm dừng hoặc tiếp tục trong lúc làm đề.</p></div><div class="topik37-player"><iframe src="${TOPIK_37_AUDIO_EMBED_URL}" title="TOPIK II lần 37 - Phần nghe" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div></section>
+    <section class="official-use-guide"><div class="official-guide-icon">${icon("shield-check")}</div><div><h2>Sử dụng tài liệu đúng nguồn</h2><p>Bạn có thể mở và tải tài liệu theo hướng dẫn tại website TOPIK. Khi chia sẻ, hãy giữ nguyên thông tin nguồn và liên kết về trang chính thức.</p></div></section>
+  </div>`;
+}
+const TOPIK37_READING_ANSWERS=window.TOPIK37_ANSWER_DATA?.reading||[1,1,3,1,2,4,1,1,3,2,3,2,2,4,3,4,1,3,2,4,1,2,3,2,4,3,4,3,2,4,1,3,4,1,4,2,1,4,2,4,3,1,3,1,3,2,3,2,4,4];
+const TOPIK37_LISTENING_ANSWERS=window.TOPIK37_ANSWER_DATA?.listening||[1,4,4,2,2,1,2,1,3,3,4,3,4,1,2,3,3,2,2,4,3,1,2,1,2,1,2,4,1,3,4,3,1,4,1,3,1,2,4,1,4,3,1,4,2,2,3,4,3,2];
+const TOPIK37_READING_PAGE_RANGES=[[1,4,20],[5,8,21],[9,10,22],[11,12,23],[13,15,24],[16,17,25],[18,20,26],[21,23,27],[24,24,28],[25,27,29],[28,29,30],[30,31,31],[32,33,32],[34,35,33],[36,37,34],[38,39,35],[40,41,36],[42,43,37],[44,45,38],[46,47,39],[48,50,40]];
+function topik37ReadingPageFor(question){return TOPIK37_READING_PAGE_RANGES.find(([from,to])=>question>=from&&question<=to)?.[2]||20}
+const TOPIK37_READING_QUESTION_OVERRIDES={
+  1:{instruction:"※ [1~2] (   )에 들어갈 가장 알맞은 것을 고르십시오. (각 2점)",prompt:"아침에 일찍 (      ) 일곱 시 비행기를 탈 수 있다.",options:["일어나야","일어나려고","일어나며","일어나더니"]},
+  2:{instruction:"※ [1~2] (   )에 들어갈 가장 알맞은 것을 고르십시오. (각 2점)",prompt:"퇴근 후에 집에 와 보니까 동생이 여행에서 (      ).",options:["돌아와 있었다","돌아오게 되었다","돌아왔으면 했다","돌아오도록 했다"]},
+  3:{instruction:"※ [3~4] 다음 밑줄 친 부분과 의미가 비슷한 것을 고르십시오. (각 2점)",prompt:"서둘러 나온 탓에 책상 위에 있는 지갑을 안 가지고 나왔다.",underline:"나온 탓에",options:["나오는 김에","나오는 사이에","나오는 바람에","나오는 대신에"]},
+  4:{instruction:"※ [3~4] 다음 밑줄 친 부분과 의미가 비슷한 것을 고르십시오. (각 2점)",prompt:"후배가 한 잘못을 알고 있었지만 미안해할까 봐 모르는 척했다.",underline:"모르는 척했다",options:["모르는 체했다","모르는 듯했다","모르는 편이다","모르기 마련이다"]}
+};
+const TOPIK37_READING_GROUPS=[[1,2],[3,4],[5,8],[9,12],[13,15],[16,18],[19,20],[21,22],[23,24],[25,27],[28,31],[32,34],[35,38],[39,41],[42,43],[44,45],[46,47],[48,50]];
+function topik37StructuredQuestion(question){return window.TOPIK37_STRUCTURED_DATA?.reading?.find?.(item=>Number(item.number)===Number(question))||null}
+function topik37QuestionOptionText(question,choice){return topik37StructuredQuestion(question)?.options?.[choice-1]||TOPIK37_READING_QUESTION_OVERRIDES[question]?.options?.[choice-1]||`Đáp án ${["①","②","③","④"][choice-1]}`}
+function topik37QuestionMediaHtml(question){
+  if(Number(question)===10)return `<figure class="topik-question-media"><img src="assets/topik37/question-10-health-chart.png" alt="남녀 직장인의 건강 관리법 — biểu đồ quản lý sức khỏe của nhân viên nam và nữ" loading="lazy"><figcaption>남녀 직장인의 건강 관리법</figcaption></figure>`;
+  return "";
+}
+function topik37PromptHtml(question,prompt,underlineTargets=[]){
+  if(question>=13&&question<=15){
+    const rows=String(prompt||"").split(/(?=\([가나다라]\))/).map(row=>row.trim()).filter(Boolean);
+    return `<div class="topik-sequence-question"><strong class="topik-sequence-number">${question}.</strong><div class="topik-sequence-box">${rows.map(row=>`<p><b>${escapeHtml(row.slice(0,3))}</b><span>${escapeHtml(row.slice(3).trim())}</span></p>`).join("")}</div></div>`;
+  }
+  let html=escapeHtml(prompt||"");
+  for(const target of underlineTargets)html=topikUnderlineCompactPhrase(prompt,target);
+  return `<p class="question-line"><b>${question}.</b> ${html.replace(/\n/g,"<br>")}</p>`;
+}
+function topikUnderlineCompactPhrase(text,target){
+  if(!target)return escapeHtml(text);
+  const indexes=[],compact=[];for(let i=0;i<text.length;i++){if(!/\s/.test(text[i])){indexes.push(i);compact.push(text[i])}}
+  const needle=String(target).replace(/\s+/g,""),start=compact.join("").indexOf(needle);if(start<0)return escapeHtml(text);
+  const from=indexes[start],to=indexes[start+needle.length-1]+1;
+  return `${escapeHtml(text.slice(0,from))}<u class="topik-source-underline">${escapeHtml(text.slice(from,to))}</u>${escapeHtml(text.slice(to))}`;
+}
+function topik37UnderlineTarget(question,line){
+  const compact=line.replace(/\s+/g,"");
+  if(question===23&&compact.includes("순간머리를한대"))return "순간머리를한대";
+  if(question===23&&compact.includes("얻어맞은것같았다"))return "얻어맞은것같았다";
+  if(question===50&&compact.endsWith("그것은"))return "그것은";
+  if(question===50&&compact.includes("자짓다름을"))return "자짓다름을철저히배격합으로써지구촌차원의불행을야기할수도있다";
+  return "";
+}
+function topik37DocxQuestionHtml(page,question){
+  const structured=topik37StructuredQuestion(question);
+  if(structured){
+    const underline=structured.underline||{},context=(structured.context||[]).map(line=>`<p class="text-line">${(underline.context||[]).reduce((html,target)=>topikUnderlineCompactPhrase(line,target),escapeHtml(line))}</p>`).join(""),prompt=topik37PromptHtml(question,structured.prompt,underline.prompt||[]);
+    return `<p class="instruction-line">${escapeHtml(structured.instruction||"")}</p>${context}${prompt}${topik37QuestionMediaHtml(question)}`;
+  }
+  const override=TOPIK37_READING_QUESTION_OVERRIDES[question];
+  if(override)return `<p class="instruction-line">${escapeHtml(override.instruction)}</p><p class="question-line"><b>${question}.</b> ${topikUnderlineCompactPhrase(override.prompt,override.underline)}</p>`;
+  const lines=window.TOPIK37_READING_DATA?.pages?.[String(page)]||[];
+  if(!lines.length)return `<p class="topik-docx-empty">Không tìm thấy nội dung câu ${question} trong dữ liệu DOCX.</p>`;
+  const questionPattern=new RegExp(`^${question}\\.`),nextPattern=new RegExp(`^${question+1}\\.`),questionIndex=lines.findIndex(line=>questionPattern.test(line));
+  if(questionIndex<0)return `<p class="topik-docx-empty">Dữ liệu OCR chưa nhận diện được câu ${question}.</p>`;
+  let end=lines.findIndex((line,index)=>index>questionIndex&&nextPattern.test(line));if(end<0)end=lines.length;
+  const group=TOPIK37_READING_GROUPS.find(([from,to])=>question>=from&&question<=to)||[question,question],groupStartPattern=new RegExp(`^${group[0]}\\.`),groupStartIndex=lines.findIndex(line=>groupStartPattern.test(line));
+  let instructionIndex=-1;for(let i=Math.max(0,groupStartIndex);i>=0;i--){if(lines[i].startsWith("※")){instructionIndex=i;break}}
+  const shared=question===group[0]&&instructionIndex>=0?lines.slice(instructionIndex,questionIndex):instructionIndex>=0&&groupStartIndex>instructionIndex?lines.slice(instructionIndex,groupStartIndex):[];
+  const selectedLines=[...shared,...lines.slice(questionIndex,end)];
+  return selectedLines.map(line=>{
+    const safe=topikUnderlineCompactPhrase(line,topik37UnderlineTarget(question,line)),isQuestion=/^\d{1,2}\./.test(line),instruction=line.startsWith("※"),option=/^[①②③④]/.test(line);
+    return `<p class="${isQuestion?"question-line":instruction?"instruction-line":option?"option-line":"text-line"}">${safe}</p>`;
+  }).join("");
+}
+function topikExamRemainingSeconds(){const started=Number(state.topikExam?.startedAt)||Date.now();return Math.max(0,70*60-Math.floor((Date.now()-started)/1000))}
+function topikExamTimeText(seconds=topikExamRemainingSeconds()){return `${String(Math.floor(seconds/60)).padStart(2,"0")}:${String(seconds%60).padStart(2,"0")}`}
+function openTopik37ModePicker(){modal("Chọn chế độ thi",`<div class="topik-mode-picker"><button data-action="start-topik37-practice"><span class="topik-mode-icon practice">${icon("sparkles")}</span><strong>Thi thử</strong><small>Xem đúng/sai và giải thích tiếng Việt ngay sau mỗi câu.</small></button><button data-action="start-topik37-real"><span class="topik-mode-icon real">${icon("timer")}</span><strong>Thi thật</strong><small>70 phút, không hiện đáp án cho tới khi nộp bài.</small></button></div>`)}
+function startTopik37Reading(force=false,mode="real"){
+  const existing=state.topikExam||{};
+  const canResume=!force&&existing.examId==="37-reading"&&existing.mode===mode&&existing.startedAt&&!existing.submitted;
+  state.topikExam=canResume?{...defaultTopikExam,...existing,answers:{...(existing.answers||{})},starred:{...(existing.starred||{})}}:{...defaultTopikExam,mode,startedAt:Date.now(),answers:{},starred:{...(existing.starred||{})}};
+  closeModal();
+  state.route="topikExam";save();render();
+}
+function topik37VietnameseExplanation(question){
+  const correct=TOPIK37_READING_ANSWERS[question-1],symbol=["①","②","③","④"][correct-1];
+  const lesson=(translation,keywords,reason,wrong,tip)=>`<div class="topik-explain-section"><h4>🇻🇳 Dịch nội dung</h4><p>${translation}</p></div><div class="topik-explain-section"><h4>🔑 Từ khóa cần chú ý</h4><p>${keywords}</p></div><div class="topik-explain-section answer"><h4>✅ Vì sao đáp án đúng?</h4><p>${reason}</p></div><div class="topik-explain-section"><h4>❌ Vì sao các đáp án khác sai?</h4><ul>${wrong.map(item=>`<li>${item}</li>`).join("")}</ul></div><div class="topik-explain-tip"><strong>💡 Mẹo làm bài:</strong> ${tip}</div>`;
+  const orderingLesson=(answer,steps,flow,wrong,tip)=>`<div class="topik-explain-section answer"><h4>✅ Đáp án đúng: ${answer}</h4><div class="topik-ordering-steps">${steps.map((step,index)=>`<p><b>${index+1}. ${step.label}</b><span>${step.reason}</span></p>`).join("")}</div></div><div class="topik-explain-flow"><strong>➡ Tóm lại, mạch ý là:</strong><div>${flow.map(item=>`<span>${item}</span>`).join("<i>→</i>")}</div></div><div class="topik-explain-section"><h4>❌ Vì sao các phương án khác sai?</h4><ul>${wrong.map(item=>`<li>${item}</li>`).join("")}</ul></div><div class="topik-explain-tip"><strong>💡 Mẹo riêng cho câu này:</strong> ${tip}</div>`;
+  const lessons={
+    5:lesson(
+      `“Lúc nào, ở đâu cũng sạch bong! Dễ bung/nhả ra và lau rất sạch.”`,
+      `<b>잘 풀리다</b>: dễ được kéo/bung ra · <b>잘 닦이다</b>: lau sạch tốt · <b>깨끗하게 싹싹</b>: lau chùi thật sạch.`,
+      `Đáp án <b>② 휴지 (giấy lau/giấy vệ sinh)</b>. Giấy được kéo ra từng đoạn rất dễ và dùng để lau sạch. Hai đặc điểm “풀리다” và “닦이다” cùng chỉ đúng một đồ vật là 휴지.`,
+      [`<b>① 연필</b> (bút chì): dùng để viết, không dùng để lau và không “bung ra”.`,`<b>③ 책상</b> (bàn): là vật được lau, không phải vật dùng để lau.`,`<b>④ 거울</b> (gương): cũng là vật được lau sạch; không thể kéo/bung ra để sử dụng.`],
+      `Với câu hỏi “무엇에 대한 글인지”, đừng dịch từng chữ rời. Hãy tìm <b>hai công dụng cùng xuất hiện</b> rồi chọn đồ vật thỏa mãn cả hai.`
+    ),
+    6:lesson(
+      `“Hãy trân trọng cả những món đồ nhỏ! Chúng tôi chuyển tấm lòng của bạn.”`,
+      `<b>배달하다</b>: giao/chuyển phát · <b>마음</b>: tấm lòng, tình cảm · <b>물건</b>: đồ vật.`,
+      `Đáp án <b>④ 우체국 (bưu điện)</b>. Bưu điện nhận và chuyển những món đồ, thư từ hoặc quà tặng chứa đựng tình cảm của người gửi.`,
+      [`<b>① 식당</b>: cung cấp món ăn, không chuyên chuyển đồ.`,`<b>② 은행</b>: xử lý tiền và giao dịch tài chính.`,`<b>③ 방송국</b>: sản xuất/phát chương trình, không giao vật phẩm.`],
+      `Nhìn động từ chính <b>배달합니다</b>; đây là dấu hiệu rất mạnh để liên tưởng đến 우체국.`
+    ),
+    7:lesson(
+      `“Hãy dành thời gian và năng lực của bạn cho hàng xóm! Khi tài năng hội tụ, ước mơ sẽ thành hiện thực.”`,
+      `<b>이웃</b>: hàng xóm/cộng đồng · <b>시간과 능력</b>: thời gian và năng lực · <b>재능</b>: tài năng.`,
+      `Đáp án <b>① 봉사 활동 (hoạt động tình nguyện)</b>. Dùng thời gian và kỹ năng cá nhân để giúp cộng đồng chính là hoạt động tình nguyện.`,
+      [`<b>② 직업 활동</b>: hoạt động nghề nghiệp có tính công việc.`,`<b>③ 체육 활동</b>: hoạt động thể thao, không nhất thiết giúp hàng xóm.`,`<b>④ 경제 활동</b>: hoạt động sản xuất, mua bán hoặc tạo thu nhập.`],
+      `Các cụm <b>이웃에게</b> và <b>재능</b> thường xuất hiện trong “재능 기부” — tình nguyện đóng góp tài năng.`
+    ),
+    8:lesson(
+      `“Hãy bảo quản ở nơi mát. Sau khi sử dụng, nhất định phải đóng nắp.”`,
+      `<b>보관하다</b>: bảo quản · <b>사용 후</b>: sau khi sử dụng · <b>뚜껑을 닫다</b>: đóng nắp.`,
+      `Đáp án <b>① 주의 사항 (những điều cần chú ý)</b>. Hai câu đều là mệnh lệnh hướng dẫn người dùng bảo quản và sử dụng sản phẩm đúng cách.`,
+      [`<b>② 재료 안내</b>: phải giới thiệu thành phần/nguyên liệu.`,`<b>③ 구입 방법</b>: phải nói nơi mua, giá hoặc cách đặt hàng.`,`<b>④ 제품 문의</b>: thường cung cấp thông tin liên hệ để hỏi về sản phẩm.`],
+      `Câu có nhiều đuôi mệnh lệnh <b>-(으)십시오</b> về bảo quản/sử dụng thường thuộc mục 주의 사항.`
+    ),
+    9:lesson(
+      `Lễ hội Ngắm sao đêm mùa thu được tổ chức vào <b>thứ Bảy, ngày 22/11/2014, từ 19:00 đến 23:00</b> tại Đài thiên văn Yeongwol. Đối tượng là 50 gia đình có con học tiểu học. Phí tham gia là 20.000 won/gia đình, riêng cư dân Yeongwol được miễn phí. Đăng ký qua điện thoại.`,
+      `<b>토</b>: thứ Bảy · <b>초등학생 자녀가 있는 가족</b>: gia đình có con học tiểu học · <b>영월 군민은 무료</b>: cư dân Yeongwol miễn phí · <b>전화 접수</b>: đăng ký qua điện thoại.`,
+      `Đáp án <b>③ 축제에 참가하려면 전화로 신청해야 한다</b>. Dòng “신청 방법: 전화 접수” nói trực tiếp rằng muốn tham gia phải đăng ký bằng điện thoại.`,
+      [`<b>① 축제는 평일 오후에 개최된다</b>: sai vì ngày tổ chức ghi “토”, tức thứ Bảy, không phải ngày thường.`,`<b>② 초등학생들만 축제에 참가할 수 있다</b>: sai vì đối tượng là <i>gia đình có con học tiểu học</i>, không phải chỉ riêng học sinh.`,`<b>④ 영월에 사는 사람들은 이만 원을 내야 한다</b>: trái với “영월 군민은 무료”; cư dân Yeongwol được miễn phí.`],
+      `Với thông báo có số liệu, hãy đối chiếu lần lượt <b>ngày – đối tượng – phí – cách đăng ký</b>. Một từ như 토 hoặc 무료 đủ để loại ngay phương án trái nghĩa.`
+    ),
+    11:lesson(
+      `<b>Yêu cầu:</b> Hãy chọn phương án có nội dung giống với bài đọc.<br><br><b>Dịch bài:</b> Báo Buổi Sáng sẽ tổ chức cuộc thi nói tiếng Hàn vào ngày 20/12 tới. Cuộc thi dành cho sinh viên đại học nước ngoài đang sống tại Hàn Quốc, với chủ đề “Tôi và Hàn Quốc”. Người muốn tham gia phải viết nội dung thuyết trình khoảng 10 trang giấy 원고지 và gửi qua email trước ngày 5/12. Vòng sơ tuyển được thay bằng việc xét bản thảo; người vào vòng chung kết sẽ được thông báo trên trang web.`,
+      `<b>Câu chứng minh trong bài:</b> “본선 참가자는 홈페이지를 통해 공지할 예정이다.”<br><b>Dịch:</b> “Những người tham gia vòng chung kết dự kiến sẽ được thông báo thông qua trang web.”<br><b>Từ khóa trùng:</b> <u>본선 참가자</u> ↔ <u>본선 참가자</u>, <u>홈페이지를 통해 공지</u> ↔ <u>홈페이지에서 확인</u>.`,
+      `Đáp án <b>③ 본선 참가자는 홈페이지에서 확인할 수 있다</b>. Bài nói người vào vòng chung kết sẽ được công bố qua website, vì vậy người dự thi có thể vào website để kiểm tra. “공지하다” là công bố/thông báo và “확인할 수 있다” là có thể kiểm tra; hai cách diễn đạt khác nhau nhưng cùng một nội dung.`,
+      [`<b>① 대회에서 발표할 원고의 양은 제한이 없다</b>: sai ở <u>제한이 없다</u> (không giới hạn). Bài quy định <u>원고지 10장 정도</u>, tức khoảng 10 trang.`,`<b>② 외국에서 살고 있는 사람도 참가할 수 있다</b>: sai ở <u>외국에서 살고 있는</u>. Bài ghi <u>한국에 사는 외국인 대학생</u> — sinh viên nước ngoài đang sống tại Hàn Quốc.`,`<b>④ 신청자는 신문사에 가서 원고를 제출하면 된다</b>: sai ở <u>신문사에 가서</u>. Bài yêu cầu <u>이메일로 보내면 된다</u> — gửi bằng email, không phải đến tòa soạn.`],
+      `Ở dạng “내용과 같은 것”, hãy gạch chân điều kiện cụ thể trong bài: <b>đối tượng, số lượng, hạn chót, phương thức nộp và nơi công bố</b>. Chỉ một chi tiết bị đổi cũng làm phương án sai.`
+    ),
+    12:lesson(
+      `<b>Yêu cầu:</b> Hãy chọn phương án có nội dung giống với bài đọc.<br><br><b>Dịch bài:</b> Một nhà hàng Hàn Quốc có thể nhìn thấy bên trong bếp đang rất được yêu thích. Ban đầu nhà hàng làm bếp bằng kính để cho khách thấy căn bếp sạch sẽ. Tuy nhiên, khách lại quan tâm đến quá trình chế biến món ăn hơn là bản thân căn bếp, vì họ thấy cảnh đầu bếp nấu ăn rất thú vị. Vì vậy, mỗi ngày một lần nhà hàng trình diễn quá trình nấu ăn như một buổi biểu diễn cho khách xem.`,
+      `<b>Câu chứng minh trong bài:</b> “손님들은 주방보다는 음식 만드는 과정에 더 큰 관심을 보였다.”<br><b>Dịch:</b> “Khách hàng quan tâm đến quá trình làm món ăn nhiều hơn là căn bếp.”<br><b>Dẫn chứng bổ sung:</b> “조리실을 유리로 만들었다.” — “Nhà hàng đã làm phòng bếp bằng kính.”<br><b>Từ khóa trùng:</b> <u>음식 만드는 과정</u> ↔ <u>음식 만드는 것을 볼 수 있다</u>.`,
+      `Đáp án <b>② 이 식당의 손님들은 음식 만드는 것을 볼 수 있다</b>. Vì phòng bếp được làm bằng kính và nhà hàng còn trình diễn việc nấu ăn mỗi ngày, khách có thể trực tiếp nhìn thấy quá trình chế biến món ăn.`,
+      [`<b>① 이 식당은 건물 전체가 유리로 만들어졌다</b>: sai ở <u>건물 전체</u> (toàn bộ tòa nhà). Bài chỉ nói <u>조리실을 유리로 만들었다</u> — phòng bếp được làm bằng kính.`,`<b>③ 이 식당은 음식을 먹는 곳과 조리실의 구분이 없다</b>: sai ở <u>구분이 없다</u> (không có sự phân cách). Bếp và khu ăn vẫn là hai khu riêng; kính chỉ giúp khách nhìn vào bên trong.`,`<b>④ 이 식당은 손님들을 위해 매일 다른 공연을 준비한다</b>: sai ở <u>다른 공연</u> (buổi biểu diễn khác nhau). Bài nói <u>매일 한 번씩 요리 만드는 것을</u> 보여 준다 — mỗi ngày trình diễn việc nấu ăn một lần, không phải mỗi ngày chuẩn bị một tiết mục khác.`],
+      `Đối chiếu chính xác phạm vi của danh từ: <b>조리실</b> không phải <b>건물 전체</b>; và chú ý từ thêm vào như <b>다른</b>, vì đây thường là bẫy làm thay đổi nội dung.`
+    ),
+    13:orderingLesson(
+      `② (나) → (다) → (라) → (가)`,
+      [{label:`(나) 온라인에서 새로운 광고 기법이 주목을 받고 있다.`,reason:`Đây là câu mở đầu vì giới thiệu chủ đề chính: một kỹ thuật quảng cáo mới trên mạng.`},{label:`(다) 이것은 제품을 직접 소개하지 않고 재미있는 동영상을 이용하는 방법이다.`,reason:`“<b>이것은</b>” (cái này/phương pháp này) chỉ “새로운 광고 기법” vừa nêu ở câu (나), nên phải đứng sau (나).`},{label:`(라) 동영상을 보고 재미있으면 사람들은 친한 사람들에게 그 동영상을 전달한다.`,reason:`Câu này giải thích quá trình hoạt động của phương pháp: người xem thấy video thú vị rồi chuyển tiếp cho người quen.`},{label:`(가) 그런 과정이 반복되면서 자연스럽게 광고가 된다.`,reason:`“<b>그런 과정</b>” chỉ quá trình xem và chia sẻ ở câu (라); đây là kết quả cuối cùng: quá trình lặp lại và tự nhiên trở thành quảng cáo.`}],
+      [`Giới thiệu kỹ thuật quảng cáo mới`,`Giải thích kỹ thuật dùng video`,`Người xem chia sẻ video`,`Quá trình lặp lại tạo thành quảng cáo`],
+      [`<b>① (나)-(가)-(라)-(다)</b>: (가) dùng “그런 과정” khi quá trình xem/chia sẻ chưa được mô tả; (다) giải thích “이것” lại bị đặt cuối.`,`<b>③ (라)-(가)-(나)-(다)</b>: mở đầu bằng hành động chia sẻ video khi chưa giới thiệu video hay kỹ thuật quảng cáo; chủ đề chính (나) xuất hiện quá muộn.`,`<b>④ (라)-(나)-(다)-(가)</b>: (라) vẫn không phù hợp làm câu mở đầu vì “그 동영상” cần một video đã được nhắc trước đó.`],
+      `Khoanh ngay cặp <b>(나) → (다)</b>: “<b>이것은</b>” trong (다) chính là “<b>새로운 광고 기법</b>” ở (나). Sau đó ghép <b>(라) → (가)</b>: (라) mô tả người xem chuyển video, còn “<b>그런 과정</b>” trong (가) tổng kết chính quá trình chuyển tiếp đó. Chỉ đáp án ② giữ nguyên cả hai cặp bắt buộc này.`
+    ),
+    14:orderingLesson(
+      `④ (라) → (다) → (나) → (가)`,
+      [{label:`(라) 등산을 갔다가 아무 생각 없이 버린 생수병이 산불을 일으킬 수 있다.`,reason:`Câu mở đầu nêu hiện tượng/vấn đề chính: chai nước bị bỏ lại có thể gây cháy rừng.`},{label:`(다) 이는 물이 든 투명한 페트병이 빛을 모으는 역할을 하기 때문이다.`,reason:`“<b>이는</b>” (điều này) giải thích nguyên nhân cho nhận định ở câu (라): chai nhựa trong chứa nước hội tụ ánh sáng.`},{label:`(나) 페트병을 통해 모아진 빛은 얼마 지나지 않아 불꽃을 만든다.`,reason:`Tiếp tục mô tả quá trình: ánh sáng được gom qua chai nhựa tạo thành tia lửa/ngọn lửa.`},{label:`(가) 그리고 그 불꽃이 주위로 번지면서 화재로 이어지게 된다.`,reason:`“<b>그리고 그 불꽃</b>” nối trực tiếp với “불꽃” ở câu (나), rồi nêu kết quả cuối: lửa lan ra và gây hỏa hoạn.`}],
+      [`Chai nước có thể gây cháy rừng`,`Giải thích chai hội tụ ánh sáng`,`Ánh sáng tạo ra lửa`,`Lửa lan thành hỏa hoạn`],
+      [`<b>① (나)-(가)-(라)-(다)</b>: bắt đầu ngay ở bước ánh sáng tạo lửa mà chưa giới thiệu chai nước/vấn đề; phần giải thích nguyên nhân (다) lại bị đặt cuối.`,`<b>② (나)-(라)-(다)-(가)</b>: (라) là câu giới thiệu vấn đề nhưng bị đặt sau một bước của quá trình; mạch tổng quát → nguyên nhân bị đảo.`,`<b>③ (라)-(가)-(나)-(다)</b>: (가) nói “그 불꽃” trước khi câu (나) tạo ra “불꽃”; đại từ chỉ định không có đối tượng phía trước.`],
+      `Bám vào chuỗi danh từ thay vì đoán: <b>페트병</b> ở (라) → “<b>이는</b>” giải thích chai nhựa ở (다) → <b>모아진 빛</b> tạo <b>불꽃</b> ở (나) → “<b>그 불꽃</b>” lan ra ở (가). Chuỗi vật lý chai → ánh sáng → lửa → hỏa hoạn khiến thứ tự ④ gần như tự lộ ra.`
+    ),
+    15:orderingLesson(
+      `③ (라) → (나) → (가) → (다)`,
+      [{label:`(라) 휴식을 취할 때 창의적인 생각이 떠오른다고 주장하는 사람들이 많다.`,reason:`Câu mở đầu giới thiệu quan điểm phổ biến: nhiều người cho rằng ý tưởng sáng tạo xuất hiện khi nghỉ ngơi.`},{label:`(나) 하지만 그저 멍하니 있다고 기발한 생각이 나오는 것은 아니다.`,reason:`“<b>하지만</b>” tạo quan hệ đối lập với quan điểm ở câu (라): không phải cứ ngồi thẫn thờ là có ý tưởng hay.`},{label:`(가) 새로운 생각은 그동안 쌓은 폭넓은 지식으로부터 나온다.`,reason:`Câu này giải thích điều kiện thật sự để có ý tưởng mới: kiến thức rộng đã tích lũy từ trước.`},{label:`(다) 다양한 지식들이 서로 연결되어서 창의적인 생각이 되는 것이다.`,reason:`Tiếp tục và kết luận cơ chế: các kiến thức đa dạng kết nối với nhau để trở thành ý tưởng sáng tạo.`}],
+      [`Nêu quan điểm “nghỉ ngơi tạo ý tưởng”`,`Phản biện bằng 하지만`,`Nêu nguồn gốc là kiến thức tích lũy`,`Kết luận kiến thức kết nối thành sáng tạo`],
+      [`<b>① (가)-(나)-(라)-(다)</b>: (나) mở bằng “하지만” nhưng câu (가) không phải quan điểm “chỉ cần nghỉ/ngồi yên”; quan hệ đối lập không tự nhiên.`,`<b>② (가)-(다)-(라)-(나)</b>: phần giải thích kiến thức đã kết thúc rồi mới quay sang quan điểm nghỉ ngơi, khiến chủ đề bị đứt; (나) xuất hiện quá muộn.`,`<b>④ (라)-(가)-(다)-(나)</b>: sau (라) cần ngay câu đối lập (나); đặt (나) cuối làm “하지만” không còn nối trực tiếp với quan điểm cần phản biện.`],
+      `Ở câu này, khóa cặp <b>(라) → (나)</b> trước: (라) nêu quan điểm “nghỉ thì nảy ra ý tưởng”, còn <b>하지만</b> ở (나) phản bác ngay quan điểm ấy. Tiếp theo khóa <b>(가) → (다)</b>: (가) nêu <b>폭넓은 지식</b>, rồi (다) giải thích chính “các kiến thức đa dạng ấy” kết nối thành ý tưởng sáng tạo. Ghép hai cặp được đáp án ③.`
+    )
+  };
+  if(lessons[question])return lessons[question];
+  const detailed={
+    1:`Đáp án: ① 일어나야. Cấu trúc “-아/어야 … -(으)ㄹ 수 있다” diễn tả điều kiện bắt buộc: “Phải dậy sớm vào buổi sáng thì mới có thể đi chuyến bay lúc 7 giờ.” ② 일어나려고 diễn tả ý định “định dậy”; ③ 일어나며 là “vừa/trong khi dậy”; ④ 일어나더니 dùng khi người nói quan sát hành động trước rồi nêu kết quả sau. Chỉ ① tạo quan hệ điều kiện tự nhiên với “탈 수 있다”.`,
+    2:`Đáp án: ① 돌아와 있었다. “집에 와 보니까” cho biết người nói về nhà rồi phát hiện một trạng thái đã có sẵn; em đã trở về từ chuyến du lịch và đang ở nhà. “-아/어 있었다” diễn tả trạng thái còn duy trì sau khi hành động hoàn tất. ② 돌아오게 되었다 là “đã trở thành/được sắp xếp để trở về”, không phải trạng thái được phát hiện. ③ 돌아왔으면 했다 là “đã mong em trở về”. ④ 돌아오도록 했다 là “đã khiến/yêu cầu em trở về”.`,
+    3:`Đáp án: ③ 나오는 바람에. “-는 탓에” và “-는 바람에” đều chỉ nguyên nhân dẫn đến kết quả không mong muốn: vì vội đi ra nên đã không mang theo chiếc ví trên bàn. ① -는 김에 là “nhân tiện”; ② -는 사이에 là “trong lúc”; ④ -는 대신에 là “thay vì/đổi lại”, nên không tương đương với phần gạch chân.`,
+    4:`Đáp án: ① 모르는 체했다. “모르는 척했다” nghĩa là “đã giả vờ như không biết”; “-는 체하다” có cùng nghĩa với “-는 척하다”. ② 모르는 듯했다 là “có vẻ như không biết”; ③ 모르는 편이다 là “thuộc kiểu/tương đối không biết”; ④ 모르기 마련이다 là “đương nhiên thường không biết”. Vì câu nói về hành động cố tình giả vờ để đàn em không thấy áy náy, ① là đáp án chính xác.`
+  };
+  if(detailed[question])return `<div class="topik-explain-section answer"><h4>✅ Phân tích đáp án</h4><p>${detailed[question]}</p></div><div class="topik-explain-tip"><strong>💡 Mẹo làm bài:</strong> Xác định cấu trúc ngữ pháp hoặc quan hệ ý nghĩa trước, sau đó thay từng lựa chọn vào câu để kiểm tra cả nghĩa lẫn cách dùng.</div>`;
+  const data=topik37StructuredQuestion(question),explainType=topikExplanationTypeFromInstruction(data?.instruction,data?.prompt),type=explainType.label,correctText=data?.options?.[correct-1]||"",wrong=(data?.options||[]).map((text,index)=>({text,index:index+1})).filter(item=>item.index!==correct),guide=explainType.guide;
+  return `<div class="topik-explain-section"><h4>🎯 Dạng câu hỏi</h4><p>Đây là câu ${question}, kiểm tra <b>${type}</b>.</p></div><div class="topik-explain-section"><h4>🔑 Cách tìm đáp án</h4><p>${guide}</p></div><div class="topik-explain-section answer"><h4>✅ Đáp án đúng: ${symbol}</h4><p><b>${escapeHtml(correctText)}</b> — lựa chọn này phù hợp với đáp án chính thức và quan hệ thông tin được trình bày trong bài.</p></div><div class="topik-explain-section"><h4>❌ Loại trừ các phương án khác</h4><ul>${wrong.map(item=>`<li><b>${["①","②","③","④"][item.index-1]} ${escapeHtml(item.text)}</b>: không khớp hoàn toàn với dữ kiện, phạm vi ý hoặc quan hệ logic mà câu hỏi yêu cầu.</li>`).join("")}</ul></div><div class="topik-explain-tip"><strong>💡 Mẹo làm bài:</strong> ${guide}</div>`;
+}
+function topikExplanationTypeFromInstruction(instruction="",prompt=""){
+  const source=`${instruction} ${prompt}`.replace(/\s+/g," ");
+  const types=[
+    {test:/글 또는 도표의 내용과 같은 것을 고르십시오/,key:"content-match",label:"đối chiếu nội dung bài/biểu đồ",guide:"Đối chiếu lần lượt từng dữ kiện như thời gian, đối tượng, địa điểm, điều kiện và con số. Đáp án đúng phải trùng hoàn toàn; với mỗi đáp án sai cần chỉ rõ từ hoặc dữ kiện đã bị đổi."},
+    {test:/내용과 같은 것을 고르십시오/,key:"content-match",label:"đối chiếu nội dung bài đọc",guide:"Tìm câu dẫn chứng trực tiếp trong bài, đối chiếu từ khóa với từng lựa chọn và loại phương án thay đổi chủ thể, phạm vi, số lượng hoặc kết quả."},
+    {test:/\(\s*\)에 들어갈 가장 알맞은 것을 고르십시오|들어갈 내용으로 가장 알맞은/,key:"blank",label:"chọn nội dung phù hợp với chỗ trống",guide:"Đọc cả câu trước và câu sau chỗ trống; xác định quan hệ điều kiện, nguyên nhân, đối lập hoặc kết quả rồi thử từng lựa chọn vào ngữ cảnh."},
+    {test:/밑줄 친 부분과 의미가 비슷한/,key:"synonym",label:"tìm cách diễn đạt gần nghĩa",guide:"Xác định chính xác nghĩa và sắc thái của phần gạch chân, sau đó so sánh cấu trúc ngữ pháp của từng lựa chọn trong cùng ngữ cảnh."},
+    {test:/무엇에 대한 글인지/,key:"object",label:"xác định đối tượng/nội dung của đoạn ngắn",guide:"Gom các từ khóa chỉ công dụng, hành động và đặc điểm; đáp án phải thỏa mãn đồng thời tất cả các dấu hiệu trong đoạn."},
+    {test:/순서대로 맞게 배열/,key:"ordering",label:"sắp xếp câu thành đoạn văn",guide:"Tìm câu mở chủ đề trước, rồi nối các từ liên kết và từ chỉ định như 이것, 그러나, 그리고 với thông tin đứng trước."},
+    {test:/글의 주제로 가장 알맞은|주제로 알맞은/,key:"topic",label:"xác định chủ đề của bài",guide:"Chọn ý bao quát toàn đoạn; loại lựa chọn chỉ nhắc một ví dụ, một chi tiết phụ hoặc mở rộng quá phạm vi bài."},
+    {test:/문장이 들어가기에 가장 알맞은 곳/,key:"insertion",label:"chọn vị trí chèn câu",guide:"Theo dõi đại từ, từ nối và mạch chủ đề ở trước/sau từng vị trí; câu chèn phải liên kết tự nhiên với cả hai phía."},
+    {test:/중심 생각/,key:"main-idea",label:"xác định ý chính",guide:"Tập trung vào quan điểm được nhắc lại hoặc kết luận; loại chi tiết minh họa và ý chỉ đúng với một phần đoạn."},
+    {test:/쓴 목적/,key:"purpose",label:"xác định mục đích của tác giả",guide:"Quan sát vấn đề tác giả nêu, thái độ đánh giá và câu kết để xác định tác giả muốn giải thích, phê phán, cảnh báo hay kêu gọi điều gì."},
+    {test:/태도로 가장 알맞은|심정으로 알맞은|기분으로 알맞은/,key:"attitude",label:"xác định thái độ hoặc tâm trạng",guide:"Dựa vào phần gạch chân và các từ biểu cảm xung quanh; phân biệt cảm xúc gần nhau bằng nguyên nhân và tình huống cụ thể."},
+    {test:/다음을 읽고 물음에 답하십시오/,key:"reading-group",label:"đọc hiểu tổng hợp",guide:"Đọc câu hỏi trước để biết cần tìm ý chính, chi tiết hay suy luận; mọi kết luận phải có câu hoặc từ khóa làm bằng chứng trong bài."}
+  ];
+  return types.find(type=>type.test.test(source))||{key:"general",label:"đọc hiểu và lựa chọn đáp án phù hợp",guide:"Xác định yêu cầu trong đề mục, tìm bằng chứng trực tiếp và đối chiếu lần lượt từng phương án với ngữ cảnh."};
+}
+function submitTopik37Reading(auto=false){
+  const answers=state.topikExam.answers||{};
+  const correct=TOPIK37_READING_ANSWERS.reduce((sum,answer,index)=>sum+(Number(answers[index+1])===answer?1:0),0);
+  state.topikExam.submitted=true;state.topikExam.score=correct*2;save();render();
+  if(auto)showToast("Đã hết giờ — bài thi được nộp tự động","clock");
+}
+function topikExamPage(){
+  const exam=state.topikExam||defaultTopikExam,index=Math.min(49,Math.max(0,Number(exam.index)||0)),question=index+1,answered=Object.keys(exam.answers||{}).length,page=topik37ReadingPageFor(question),practice=exam.mode==="practice",selected=Number(exam.answers?.[question]),feedback=practice&&!!selected,correct=TOPIK37_READING_ANSWERS[question-1];
+  if(exam.submitted){const correct=Math.round((Number(exam.score)||0)/2);return `<div class="topik-exam-shell"><section class="topik-result-card"><span class="topik-result-icon">${icon("trophy")}</span><h1>Đã hoàn thành phần Đọc</h1><strong>${exam.score}/100 điểm</strong><p>${correct}/50 câu đúng · ${answered}/50 câu đã trả lời</p><div class="topik-result-actions"><button class="button" data-action="exit-topik-exam">Về danh sách đề</button><button class="button primary" data-action="restart-topik37-reading">Làm lại</button></div></section></div>`}
+  return `<div class="topik-exam-shell">
+    <section class="topik-exam-head"><div><button class="topik-exit-button" data-action="exit-topik-exam">${icon("arrow-left")} Thoát</button><span class="official-card-level">TOPIK II · 제37회 · 읽기</span><h1>Đề đọc TOPIK II lần 37</h1><p>Câu ${question} / 50</p></div><div class="topik-clock ${practice?"practice":""}"><span>${icon(practice?"sparkles":"headphones")} ${practice?"Chế độ thi thử":"Chế độ thi thật"}</span>${practice?`<strong>LUYỆN TẬP</strong><small>Xem kết quả từng câu</small>`:`<strong id="topikExamClock">${topikExamTimeText()}</strong><small>Thời gian còn lại</small>`}</div></section>
+    <section class="topik-question-nav"><div class="topik-nav-title"><strong>CÂU HỎI</strong><span>${answered} / 50 đã trả lời</span></div><div class="topik-nav-grid">${Array.from({length:50},(_,i)=>{const n=i+1,answer=Number(exam.answers?.[n]),knownResult=(practice||exam.submitted)&&!!answer,isWrong=knownResult&&answer!==TOPIK37_READING_ANSWERS[n-1],isStarred=!!exam.starred?.[n];return `<button class="${n===question?"current":""} ${answer?"answered":""} ${isWrong?"wrong":""} ${isStarred?"starred":""}" data-topik-question="${n}" title="${isStarred?"Đã gắn sao · ":""}${isWrong?"Đã trả lời sai":answer?"Đã trả lời":"Chưa trả lời"}">${n}${isStarred?'<i>★</i>':""}</button>`}).join("")}</div><div class="topik-nav-legend"><span class="correct">Đúng</span><span class="wrong">Sai</span><span class="starred">Đã gắn sao</span></div><div class="topik-answer-progress"><i style="width:${answered*2}%"></i></div></section>
+    <section class="topik-question-workspace"><div class="topik-page-heading"><div><span>DỮ LIỆU DOCX · TRANG ${page}</span><strong>Câu ${question}</strong></div><div class="topik-question-tools"><button class="topik-star-button ${exam.starred?.[question]?"starred":""}" data-topik-star="${question}" title="${exam.starred?.[question]?"Bỏ lưu câu này":"Gắn sao để lưu câu này"}">${exam.starred?.[question]?"★":"☆"}<span>${exam.starred?.[question]?"Đã lưu":"Lưu câu"}</span></button><span class="topik-docx-source">37회TOPIK2(듣기쓰기읽기)_B형.docx</span></div></div><div class="topik-docx-question">${topik37DocxQuestionHtml(page,question)}</div><div class="topik-choice-panel"><h2>Chọn đáp án cho câu ${question}</h2><div class="topik-choice-grid">${[1,2,3,4].map(choice=>{const isSelected=selected===choice,isCorrect=feedback&&choice===correct,isWrong=feedback&&isSelected&&choice!==correct;return `<button class="${isSelected?"selected":""} ${isCorrect?"correct":""} ${isWrong?"wrong":""}" data-topik-answer="${choice}" ${feedback?"disabled":""}><span>${choice}</span>${escapeHtml(topik37QuestionOptionText(question,choice))}${isCorrect?icon("check"):isWrong?icon("x"):""}</button>`}).join("")}</div>${feedback?`<div class="topik-ai-explanation ${selected===correct?"correct":"wrong"}"><div class="topik-ai-title">${icon("lightbulb")} <strong>${selected===correct?"Chính xác! Đang chuyển câu tiếp…":"Giải thích bằng tiếng Việt"}</strong><span>Giải thích chi tiết</span></div><div class="topik-ai-body">${topik37VietnameseExplanation(question)}</div></div>`:""}</div><div class="topik-exam-nav-buttons"><button class="button" data-topik-move="-1" ${question===1?"disabled":""}>${icon("arrow-left")} Câu trước</button><button class="button danger" data-action="submit-topik37-reading">Nộp bài</button><button class="button primary" data-topik-move="1" ${question===50?"disabled":""}>Câu tiếp ${icon("arrow-right")}</button></div></section>
+  </div>`;
+}
 function communityPage(){return header("Cộng đồng","Chia sẻ thành tích, hỏi đáp và học cùng nhau.",button(`${icon("plus")} Đăng bài`,"new-post","primary"))+`<div class="grid lg:grid-cols-[1fr_320px] gap-5"><div id="feed" class="stack">${["Mẹo nhớ 20 từ Hàn Việt theo bộ thủ","Mình vừa hoàn thành chuỗi học 30 ngày!","Ai đang ôn TOPIK II cùng mình?"].map((t,i)=>`<article class="card section-card"><div class="flex gap-3"><span class="avatar">${["TH","QB","LP"][i]}</span><div><strong>${["Thu Hà","Quốc Bảo","Lan Phương"][i]}</strong><p class="muted text-xs">Khoảng ${i+1} giờ trước</p></div></div><h2 class="text-base mt-4">${t}</h2><p class="muted text-sm">Cùng trao đổi kinh nghiệm học và ghi nhớ từ vựng hiệu quả nhé.</p><div class="flex gap-2 mt-4"><button class="button small" data-like="${i}">${icon("heart")} <span>${12+i*7}</span></button><button class="button small" data-comment="${i}">${icon("message-circle")} Bình luận</button></div></article>`).join("")}</div><aside class="card section-card h-fit"><h2 class="text-sm">Chủ đề nổi bật</h2>${["#TOPIKII","#HànViệtMỗiNgày","#ThànhNgữ","#HọcCùngNhau"].map(x=>`<button class="dropdown-item" data-topic="${x}">${x}</button>`).join("")}</aside></div>`}
 function statsPage(){const vals=[32,48,41,75,62,91,state.today];return header("Thống kê","Xem xu hướng học tập và điểm cần cải thiện.",button("Xuất báo cáo","export-stats"))+`<div class="stats-grid md:grid-cols-4 mb-5">${[["Tổng câu","2.840"],["Độ chính xác","78%"],["Thời gian","18,4 giờ"],["XP",state.xp.toLocaleString()]].map(x=>`<div class="card stat"><strong>${x[1]}</strong><small>${x[0]}</small></div>`).join("")}</div><section class="card section-card"><h2 class="text-sm">Hoạt động 7 ngày</h2><div class="chart">${vals.map(v=>`<div class="bar" style="height:${Math.max(18,v/1.6)}%"><span>${v}</span></div>`).join("")}</div></section>`}
 function calendarPage(){const days=Array.from({length:30},(_,i)=>i+1);return header("Lịch học","Lên kế hoạch và duy trì nhịp học đều đặn.",button(`${icon("plus")} Thêm lịch`,"add-schedule","primary"))+`<section class="card section-card"><div class="grid grid-cols-7 gap-2">${["T2","T3","T4","T5","T6","T7","CN"].map(x=>`<div class="text-center muted text-xs">${x}</div>`).join("")}${days.map(d=>`<button class="aspect-square rounded-xl border ${state.calendar.includes(d)?"border-indigo-500 bg-indigo-500/20":"border-white/5 bg-white/[.02]"}" data-calendar-day="${d}"><strong>${d}</strong>${state.calendar.includes(d)?'<small class="block text-[9px] text-indigo-300">Học</small>':""}</button>`).join("")}</div></section>`}
@@ -2605,8 +2822,10 @@ function ensureLearnSummaryStyle(){
   document.head.appendChild(style);
 }
 
-const pageRenderers={home:homePage,courses:coursesPage,decks:decksPage,inputData:inputDataPage,createDeck:createDeckPage,deckDetail:deckDetailPage,learnSession:learnSessionPage,quizExcel:quizExcelPage,practice:practicePage,exam:examPage,community:communityPage,stats:statsPage,calendar:calendarPage,leaderboard:leaderboardPage,settings:settingsPage};
-function render(){rememberNavigation();applyBackgroundStyle();ensureLearnSummaryStyle();rememberLastOpenedTabFromRoute();if(repairLegacyStudyCountOvercount())save();document.body.classList.toggle("learn-mode",state.route==="learnSession");renderNav();renderUserUi();app.innerHTML=(pageRenderers[state.route]||homePage)();ensureFixedTopbar();applyCustomLogo();setTimeout(()=>{ensureFixedTopbar();applyCustomLogo()},0);window.scrollTo({top:0});}
+const pageRenderers={home:homePage,courses:coursesPage,decks:decksPage,inputData:inputDataPage,createDeck:createDeckPage,deckDetail:deckDetailPage,learnSession:learnSessionPage,quizExcel:quizExcelPage,practice:practicePage,exam:examPage,topikExam:topikExamPage,community:communityPage,stats:statsPage,calendar:calendarPage,leaderboard:leaderboardPage,settings:settingsPage};
+let topikExamTimer=null;
+function syncTopikExamTimer(){clearInterval(topikExamTimer);topikExamTimer=null;if(state.route!=="topikExam"||state.topikExam?.submitted||state.topikExam?.mode==="practice")return;const update=()=>{const remaining=topikExamRemainingSeconds(),clock=document.querySelector("#topikExamClock");if(clock)clock.textContent=topikExamTimeText(remaining);if(remaining<=0){clearInterval(topikExamTimer);submitTopik37Reading(true)}};update();topikExamTimer=setInterval(update,1000)}
+function render(){rememberNavigation();applyBackgroundStyle();ensureLearnSummaryStyle();rememberLastOpenedTabFromRoute();if(repairLegacyStudyCountOvercount())save();document.body.classList.toggle("learn-mode",state.route==="learnSession");document.body.classList.toggle("topik-exam-mode",state.route==="topikExam");renderNav();renderUserUi();app.innerHTML=(pageRenderers[state.route]||homePage)();ensureFixedTopbar();applyCustomLogo();syncTopikExamTimer();setTimeout(()=>{ensureFixedTopbar();applyCustomLogo()},0);window.scrollTo({top:0});}
 
 document.addEventListener("click",e=>{
   const route=e.target.closest("[data-route]")?.dataset.route;if(route){
@@ -2665,6 +2884,12 @@ document.addEventListener("click",e=>{
     if(action==="export-stats"){const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="hanvietquiz-stats.json";a.click();URL.revokeObjectURL(a.href);showToast("Đã xuất báo cáo");return}
     if(action==="input-pick-file"){pickInputFile();return}
     if(action==="input-apply"){applyInputDataSettings();return}
+    if(action==="start-topik37-reading"){openTopik37ModePicker();return}
+    if(action==="start-topik37-practice"){startTopik37Reading(true,"practice");return}
+    if(action==="start-topik37-real"){startTopik37Reading(true,"real");return}
+    if(action==="restart-topik37-reading"){startTopik37Reading(true,state.topikExam?.mode||"real");return}
+    if(action==="exit-topik-exam"){state.route="exam";save();render();return}
+    if(action==="submit-topik37-reading"){if(confirm("Nộp bài và xem kết quả?"))submitTopik37Reading();return}
     if(action==="start-exam"){startExam();return}
     if(action==="back-to-decks"){state.route="decks";save();render();return}
     if(action==="back-to-folders"){state.activeCreatedFolder="";state.route="decks";save();render();return}
@@ -2690,6 +2915,10 @@ document.addEventListener("click",e=>{
     if(action==="apply-learn-settings"){applyLearnSettings();return}
     if(action==="reset-learn-progress"){resetLearnProgress();return}
   }
+  const topikQuestion=e.target.closest("[data-topik-question]")?.dataset.topikQuestion;if(topikQuestion){state.topikExam.index=Math.max(0,Math.min(49,Number(topikQuestion)-1));save();render();return}
+  const topikStar=e.target.closest("[data-topik-star]")?.dataset.topikStar;if(topikStar){const question=Number(topikStar),starred={...(state.topikExam.starred||{})};if(starred[question])delete starred[question];else starred[question]=true;state.topikExam.starred=starred;save();render();showToast(starred[question]?`Đã lưu câu ${question}`:`Đã bỏ lưu câu ${question}`,"star");return}
+  const topikAnswer=e.target.closest("[data-topik-answer]")?.dataset.topikAnswer;if(topikAnswer){const question=(Number(state.topikExam.index)||0)+1;if(state.topikExam.mode==="practice"&&state.topikExam.answers?.[question])return;const choice=Number(topikAnswer),isCorrect=choice===TOPIK37_READING_ANSWERS[question-1];state.topikExam.answers={...(state.topikExam.answers||{}),[question]:choice};if(state.topikExam.mode==="practice")state.topikExam.feedbackQuestion=question;else if(question<50)state.topikExam.index=question;save();render();if(state.topikExam.mode==="practice"&&isCorrect&&question<50)setTimeout(()=>{if(state.route==="topikExam"&&Number(state.topikExam.index)===question-1&&Number(state.topikExam.answers?.[question])===choice){state.topikExam.index=question;save();render()}},900);return}
+  const topikMove=e.target.closest("[data-topik-move]")?.dataset.topikMove;if(topikMove){state.topikExam.index=Math.max(0,Math.min(49,(Number(state.topikExam.index)||0)+Number(topikMove)));save();render();return}
   const study=e.target.closest("[data-study]")?.dataset.study;if(study){closeModal();state.activeCreatedDeck=null;state.route="practice";state.flashIndex=(Number(study)-1)%words.length;save();render();return}
   const deck=e.target.closest("[data-deck]")?.dataset.deck;if(deck&&!e.target.closest("[data-study]")){const d=decks.find(x=>x.id==deck);modal(d.name,`<p class="muted">${d.term}</p><div class="mt-4">${progress(Math.round(d.learned/d.total*100))}</div><div class="flex gap-2 mt-5"><button class="button primary" data-study="${d.id}">Học ngay</button><button class="button" data-favorite="${d.id}">${state.favorites.includes(d.id)?"Bỏ yêu thích":"Yêu thích"}</button></div>`);return}
   const openCreatedFolder=e.target.closest("[data-open-created-folder]")?.dataset.openCreatedFolder;if(openCreatedFolder!==undefined){state.activeCreatedFolder=openCreatedFolder;state.route="decks";save();render();return}
